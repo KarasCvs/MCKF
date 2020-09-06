@@ -22,7 +22,7 @@ MCKFObservation = np.zeros(N)
 noise_q = 0             # 系统噪音
 noise_r = np.matrix([2])
 noise_state = np.asmatrix(np.sqrt(noise_q) * randn(x_dimension, N))
-noise_observation = np.asmatrix(int(np.sqrt(noise_r)) * randn(y_dimension, N))
+noise_observation = np.asmatrix(int(np.sqrt(noise_r)) * randn(y_dimension, N)+15*randn(y_dimension, N))
 
 A = np.matrix([1, 0, 0, 0, 1, 0, 0, 0, 1]).reshape(x_dimension, x_dimension)
 B = np.matrix([1, 0, 0, 0, 1, 0, 0, 0, 1]).reshape(x_dimension, y_dimension)
@@ -81,6 +81,7 @@ kf_error = RealOutput - KFObservation
 kf_mean = np.mean(kf_error)
 kf_std = np.std(kf_error)
 kf_pdf = norm.pdf(time_line-t/2, 0, kf_std)
+print(np.mean(mckf_error), np.mean(kf_error))
 
 
 plt.plot(np.array(sensor.T[:, 0]), np.array(sensor.T[:, 1]), linewidth=1, linestyle="-", label="Sensor")
