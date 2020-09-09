@@ -28,33 +28,33 @@ function [x,P] = mcukf(fstate, x, P, hmeas, z, Q, R, k)
 %     H      -       : measurement slope matrix, (P1^-1*P12)'
 %     W      -       : S^-1[I; H]
 %     xi     -       : 联合噪音, 组合x-x_hat和R
-% =====================================================================  
-% By Yi Cao at Cranfield University, 04/01/2008  
-% Modified by JD Liu 2010-4-20  
-% Modified by zhangwenyu, 12/23/2013  
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  
-if nargin<7  
-    error('Not enough inputarguments!');  
-end  
-% 初始化，为了简化函数，求lamda的过程被默认  
-L = numel(x);                                 %numer of states  
-m = numel(z);                                 %numer of measurements  
-alpha = 1e-3;                                 %default, tunable  
-ki = abs(0);                                       %default, tunable  
-beta = 2;                                     %default, tunable  
+% =====================================================================
+% By Yi Cao at Cranfield University, 04/01/2008
+% Modified by JD Liu 2010-4-20
+% Modified by zhangwenyu, 12/23/2013
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if nargin<7
+    error('Not enough inputarguments!');
+end
+% 初始化，为了简化函数，求lamda的过程被默认
+L = numel(x);                                 %numer of states
+m = numel(z);                                 %numer of measurements
+alpha = 1e-3;                                 %default, tunable
+ki = abs(0);                                       %default, tunable
+beta = 2;                                     %default, tunable
 %mc
 eps = 1e-10;                                    %不动点迭代评价常数
 sigma = 2;                                  %kernel bandwidth
-% UT转换部分  
-lambda = alpha^2*(L+ki)-L;                    %scaling factor  
-c = L+lambda;                                 %scaling factor  
-Wm = [lambda/c 0.5/c+zeros(1,2*L)];           %weights for means  
-Wc = Wm;  
-Wc(1) = Wc(1)+(1-alpha^2+beta);               %weights for covariance  
-c = sqrt(c);  
+% UT转换部分
+lambda = alpha^2*(L+ki)-L;                    %scaling factor
+c = L+lambda;                                 %scaling factor
+Wm = [lambda/c 0.5/c+zeros(1,2*L)];           %weights for means
+Wc = Wm;
+Wc(1) = Wc(1)+(1-alpha^2+beta);               %weights for covariance
+c = sqrt(c);
 X = sigmas(x,P,c);                            %sigma points around x x_hat(k-1|k-1)
-[x1,X1,P1,X2] = ut(fstate,X,Wm,Wc,L,Q,k);       %unscented transformation of process  x1=x_hat(k|k-1)是UT变换后sigma点的加权均值. X2 = X1-x1的均一化值
+[x1,X1,P1,X2] = ut(fstate,X,Wm,Wc,L,Q,k);       %unscented transformation of process  x1=x_hat(k|k-1)是UT变换后sigma点的加权均值. X2 = X1-x1
 [z1,Z1,P2,Z2] = ut(hmeas,X1,Wm,Wc,m,R,k);       %unscented transformation of measurments % P1就是P(k|k-1), z1就是y_hat, P2就是P_zz
 r = sqrt(R)*randn(m, 1);                      % 随机噪音
 % 滤波部分  UT转换和MC没关系
@@ -76,10 +76,10 @@ while EstimateRate > eps
     Cy = Cy + eye(m)*1.0e-5;
     P_hat = Sp/Cx*Sp';
     R_hat = Sr/Cy*Sr';
-    
-    K = P_hat*H'/(H*P_hat*H' + R_hat);  
+
+    K = P_hat*H'/(H*P_hat*H' + R_hat);
     X_hat1 = x1 + K*(z - z1); % y很可能有问题, 是y还是z?
-    EstimateRate = norm(X_hat1-X_hat) / norm(X_hat); 
+    EstimateRate = norm(X_hat1-X_hat) / norm(X_hat);
     X_hat = X_hat1;
     count = count+1;
 end

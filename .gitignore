@@ -1,5 +1,1 @@
-MCKF/__pycache__/
-MCKF/kf/__pycache__/
-MCKF/pf/__pycache__/
-MCKF/mckf/__pycache__/
-MCKF/mcukf/__pycache__/
+*pycache*/
