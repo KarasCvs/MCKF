@@ -1,5 +1,5 @@
-
-myslam_master/kf/__pycache__/
-myslam_master/pf/__pycache__/
-myslam_master/mckf/__pycache__/
-myslam_master/mcukf/__pycache__/
+MCKF/__pycache__/
+MCKF/kf/__pycache__/
+MCKF/pf/__pycache__/
+MCKF/mckf/__pycache__/
+MCKF/mcukf/__pycache__/
