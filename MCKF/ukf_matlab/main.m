@@ -5,7 +5,7 @@ n=4;
 t=0.2;  
 q=1; %std of process  
 r=0.8; %std of measurement 
-rng(2);
+rng(3);
 Q=q^2*eye(n); % covariance of process  
 R=r^2*eye(n); % covariance of measurement  
 f=@(x, k)real([x(1)+t*x(3);sin(x(2)+t*x(4));x(3)+t*x(2);x(4)+t*x(1)]); % 4d nonlinear state equations  
@@ -26,8 +26,7 @@ sV = zeros(n,N); %actual
 zV = zeros(n,N);  
 
 for k=1:N  
-    disp(k);
-    z = h(s, k) + r*randn(n, 1)+20*randn(n, 1); % 1d measurments
+    z = h(s, k) + r*randn(n, 1)+200*randn(n, 1); % 1d measurments
 %     z = h(s) + r*randn(n, 1); orignal
     sV(:,k)= s; % save actual state  
     zV(:,k) = z; % save measurment  
@@ -44,8 +43,8 @@ end
 %     uMSE = uMSE + (sV(:, k) - uxV(:, k)).^2;
 %     mcMSE = mcMSE + (sV(:, k) - mcxV(:, k)).^2;
 % end
-uMSE = mean((zV - uxV).^2, 2);
-mcMSE = mean((zV - mcxV).^2, 2);
+uMSE = mean((sV - uxV).^2, 2);
+mcMSE = mean((sV - mcxV).^2, 2);
 
 fprintf("uMSE=%.2f,\n", uMSE);
 fprintf("mcMSE=%.2f\n",mcMSE);

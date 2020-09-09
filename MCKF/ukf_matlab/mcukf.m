@@ -44,8 +44,8 @@ alpha = 1e-3;                                 %default, tunable
 ki = abs(0);                                       %default, tunable  
 beta = 2;                                     %default, tunable  
 %mc
-eps = 1e-7;                                    %不动点迭代评价常数
-sigma = 6;                                  %kernel bandwidth
+eps = 1e-10;                                    %不动点迭代评价常数
+sigma = 2;                                  %kernel bandwidth
 % UT转换部分  
 lambda = alpha^2*(L+ki)-L;                    %scaling factor  
 c = L+lambda;                                 %scaling factor  
@@ -55,7 +55,7 @@ Wc(1) = Wc(1)+(1-alpha^2+beta);               %weights for covariance
 c = sqrt(c);  
 X = sigmas(x,P,c);                            %sigma points around x x_hat(k-1|k-1)
 [x1,X1,P1,X2] = ut(fstate,X,Wm,Wc,L,Q,k);       %unscented transformation of process  x1=x_hat(k|k-1)是UT变换后sigma点的加权均值. X2 = X1-x1的均一化值
-[z1,Z1,P2,Z2] = ut(hmeas,X1,Wm,Wc,m,R,k);       %unscented transformation of measurments % P1就是P(k|k-1), z1就是y_hat 
+[z1,Z1,P2,Z2] = ut(hmeas,X1,Wm,Wc,m,R,k);       %unscented transformation of measurments % P1就是P(k|k-1), z1就是y_hat, P2就是P_zz
 r = sqrt(R)*randn(m, 1);                      % 随机噪音
 % 滤波部分  UT转换和MC没关系
 % Sp = chol(P1);
@@ -83,10 +83,7 @@ while EstimateRate > eps
     X_hat = X_hat1;
     count = count+1;
 end
-% disp(count);
 x = X_hat1;                              %state update
 K(isnan(K)==1) = 0;
 P = (eye(L)-K*H)*P1*(eye(L)-K*H)' + K*R*K';                                %covariance update
-disp(eig(P));
-disp("P=");disp(P);
 end
