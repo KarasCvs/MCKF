@@ -43,7 +43,7 @@ class UKF():
             trans_points[:, i] = transfunc(ut_input[:, i], k, self.Ts)
             trans_mean = trans_mean + self.W_mean[i] * trans_points[:, i]
         trans_dev = trans_points - trans_mean*np.ones((1, cols))
-        trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T + self.noise_R
+        trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T
         return trans_mean, trans_points, trans_cov, trans_dev
 
     def estimate(self, x_prior, sensor_data, P, k):
@@ -53,6 +53,7 @@ class UKF():
         P_xz = x_dev*np.diag(self.W_cov)*z_dev.T
         K = P_xz * np.linalg.inv(P_zz)
         x_posterior = x_mean + K*(sensor_data - obs_mean)
-        P_posterior = P_xx - K*P_xz.T
+        P_posterior = P_xx - K*P_zz*K.T
+        DEBUG_P_posterior = np.linalg.eigvals(P_posterior)
         return(x_posterior, P_posterior)
 

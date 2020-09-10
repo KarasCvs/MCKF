@@ -1,4 +1,4 @@
 {
-    "python.pythonPath": "D:\\programs\\Anaconda\\python.exe",
-    "terminal.integrated.cwd": "D:\\Workspace\\MCKF"
+    "python.pythonPath": "/usr/bin/python3",
+    "terminal.integrated.cwd": "~/workspace/MCKF/MCKF"
 }
