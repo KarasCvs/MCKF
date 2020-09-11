@@ -1,0 +1,5 @@
+transferFunction_(StateMemberX, StateMemberVx) = cy * cp * delta;
+transferFunction_(StateMemberX, StateMemberVy) = (cy * sp * sr - sy * cr) * delta
+transferFunction_(StateMemberY, StateMemberVx) = sy * cp * delta;
+transferFunction_(StateMemberY, StateMemberVy) = (sy * sp * sr + cy * cr) * delta;
+transferFunction_(StateMemberYaw, StateMemberVyaw) = transferFunction_(StateMemberZ, StateMemberVz);

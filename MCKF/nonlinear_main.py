@@ -10,9 +10,9 @@ from ukf.ukf import UKF
 
 
 t = 10
-Ts = 0.2
-states_dimension = 4
-obs_dimension = 4
+Ts = 0.1
+states_dimension = 3
+obs_dimension = 1
 N = int(t/Ts)
 time_line = np.linspace(0, t, N)
 # --------------------------------init---------------------------------- #
@@ -38,31 +38,35 @@ ukf.ut_init(1.1547e-3, 2, -1)
 
 # --------------------------------main procedure---------------------------------- #
 # system No.1
-states[:, 0] = np.array([0.3, 0.2, 1, 2]).reshape(states_dimension, 1)
-ukf_states[:, 0] = np.array([0.3, 0.2, 1, 2]).reshape(states_dimension, 1)
-P = np.diag([1, 1, 1, 1])
+# states[:, 0] = np.array([0.3, 0.2, 1, 2]).reshape(states_dimension, 1)
+# ukf_states[:, 0] = np.array([0.3, 0.2, 1, 2]).reshape(states_dimension, 1)
+# P = np.diag([1, 1, 1, 1])
 
 # system No.2
-# states[:, 0] = np.array([300000, -20000, 1/1000]).reshape(states_dimension, 1)
-# ukf_states[:, 0] = np.array([300000, -20000, 0.0009]).reshape(states_dimension, 1)
-# P = np.diag([1000000, 4000000, 1/1000000])
+states[:, 0] = np.array([300000, -20000, 1/1000]).reshape(states_dimension, 1)
+ukf_states[:, 0] = np.array([300000, -20000, 0.0009]).reshape(states_dimension, 1)
+P = np.diag([1000000, 4000000, 1/1000000])
 for i in range(1, N):
     # 步进
     real_obs[:, i] = N_func.observation_func(states[:, i-1])
     sensor[:, i] = real_obs[:, i] + observation_noise[:, i]
     ukf_states[:, i], P = ukf.estimate(ukf_states[:, i-1], sensor[:, i], P, i)
-    states[:, i] = N_func.state_func(states[:, i-1], Ts) + state_noise[:, i]
-    # ukf_MSE[:, i] = pow(np.mean(states[:, i] - ukf_obs[:, i]), 2)
+    states[:, i] = states[:, i-1] + N_func.state_func(states[:, i-1], Ts) * Ts + state_noise[:, i]
+    ukf_MSE[:, i] = pow(np.mean(states[:, i] - ukf_obs[:, i]), 2)
 
 
-for i in range(obs_dimension):
-    plt.subplot(100*obs_dimension+11+i)
+for i in range(states_dimension):
+    plt.figure(1)
+    plt.subplot(100*states_dimension+11+i)
     # plt.plot(time_line, sensor[i, :].A.reshape(N,), linewidth=1, linestyle="-", label="Sensor")
-    # plt.plot(time_line, ukf_states[i, :].A.reshape(N,), linewidth=1, linestyle="-", label="UKF")
+    plt.plot(time_line, ukf_states[i, :].A.reshape(N,), linewidth=1, linestyle="-", label="UKF")
     plt.plot(time_line, states[i, :].A.reshape(N,), linewidth=1, linestyle="-", label="Real State")
-    # plt MSE
-    # plt.plot(time_line, ukf_MSE[i, :].A.reshape(N,), linewidth=1, linestyle="-", label="ukf MSE")
-    # plt.plot(time_line, sensor_MSE[i, :].A.reshape(N,), linewidth=1, linestyle="-", label="sensor MSE")
     plt.grid(True)
     plt.legend(loc='upper left')
+    # plt MSE
+plt.figure(2)
+plt.plot(time_line, ukf_MSE.A.reshape(N,), linewidth=1, linestyle="-", label="ukf MSE")
+# plt.plot(time_line, sensor_MSE[i, :].A.reshape(N,), linewidth=1, linestyle="-", label="sensor MSE")
+plt.grid(True)
+plt.legend(loc='upper left')
 plt.show()
