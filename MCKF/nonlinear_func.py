@@ -3,7 +3,7 @@ import numpy as np
 
 
 # Nonlinear func No.1,  Default
-def state_func(states, k=0, Ts=0.1):
+def state_func(states, k=0, Ts=0.2):
     states_ = np.zeros(4).reshape(4, 1)
     states_[0] = states[0]+Ts*states[2]
     states_[1] = math.sin((states[1] + Ts*states[3]))
@@ -33,3 +33,6 @@ def observation_func(states, k=0, Ts=0.1):
 #     observation = np.zeros(1).reshape(1, 1)
 #     observation[0] = math.sqrt(pow(pow(100000, 2)+(states[0]-100000), 2))
 #     return observation
+
+if __name__ == "__main__":
+    pass

@@ -3,9 +3,9 @@ clc;
 clear;  
 n=4;  
 t=0.2;  
-q=1; %std of process  
-r=0.8; %std of measurement 
-rng(3);
+q=0; %std of process  
+r=2; %std of measurement 
+% rng(3);
 Q=q^2*eye(n); % covariance of process  
 R=r^2*eye(n); % covariance of measurement  
 f=@(x, k)[x(1)+t*x(3);sin(x(2)+t*x(4));x(3)+t*x(2);x(4)+t*x(1)]; % 4d nonlinear state equations  
@@ -19,7 +19,7 @@ x=s+q*randn(n,1); %initial state % initial state with noise
 x_u = x;
 x_mc = x;
 P_mc = eye(n); P_u = eye(n); % initial state covraiance  
-N=20; % total dynamic steps  
+N=250; % total dynamic steps  
 mcxV = zeros(n,N); %mcukf estmate % allocate memory  
 uxV = zeros(n, N); %ukf
 sV = zeros(n,N); %actual  
@@ -50,8 +50,8 @@ fprintf("uMSE=%.2f,\n", uMSE);
 % fprintf("mcMSE=%.2f\n",mcMSE);
 for k=1:n % plot results  
     subplot(n,1,k)  
-    plot(1:N, sV(k,:), '-', 1:N, mcxV(k,:), '--', 1:N, uxV(k,:), '-.', 1:N,zV(k,:),'*');
-%     plot(1:N, sV(k,:), '-', 1:N, uxV(k,:), '--',1:N,zV(k,:),'*')
+%     plot(1:N, sV(k,:), '-', 1:N, mcxV(k,:), '--', 1:N, uxV(k,:), '-.', 1:N,zV(k,:),'*');
+    plot(1:N, sV(k,:), '-', 1:N, uxV(k,:), '--',1:N,zV(k,:),'*')
 %     plot(1:N, sV(k,:), '-', 1:N, mcxV(k,:), '--',1:N,zV(k,:),'*')
     legend("Real", "MCUKF", "UKF", "Measurement ");
 end  

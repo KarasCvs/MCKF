@@ -17,7 +17,7 @@ class UKF():
         self.noise_Q = pow(q, 2) * np.identity(self.states_dimension)
         self.noise_R = pow(r, 2) * np.identity(self.obs_dimension)
 
-    def ut_init(self, alpha=2e-3, beta=2, ki=-1):
+    def ut_init(self, alpha=1e-3, beta=2, ki=0):
         self.alpha = alpha
         self.beta = beta
         self.ki = ki
@@ -30,12 +30,13 @@ class UKF():
 
     def sigma_points(self, x_prior, P):
         P_ldl = ldl(P)
-        sigma_A_ = np.sqrt(self.c_) + P_ldl[0] * np.linalg.cholesky(P_ldl[1])
+        sigma_A_ = np.sqrt(self.c_) * P_ldl[0] * np.linalg.cholesky(P_ldl[1])
+        # sigma_A_ = np.sqrt(self.c_) * np.linalg.cholesky(P)
         sigma_Y_ = x_prior * np.ones((1, self.states_dimension))
         X_sigma = np.hstack((x_prior, sigma_Y_+sigma_A_, sigma_Y_-sigma_A_))
         return X_sigma
 
-    def ut(self, transfunc, ut_input, dimension, k):
+    def ut(self, transfunc, ut_input, Noise, dimension, k):
         cols = ut_input.shape[1]
         trans_mean = np.mat(np.zeros((dimension, 1)))
         trans_points = np.mat(np.zeros((dimension, cols)))
@@ -43,17 +44,17 @@ class UKF():
             trans_points[:, i] = transfunc(ut_input[:, i], k, self.Ts)
             trans_mean = trans_mean + self.W_mean[i] * trans_points[:, i]
         trans_dev = trans_points - trans_mean*np.ones((1, cols))
-        trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T
+        trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T + Noise
         return trans_mean, trans_points, trans_cov, trans_dev
 
     def estimate(self, x_prior, sensor_data, P, k):
         X_sigma = self.sigma_points(x_prior, P)
-        x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigma, self.states_dimension, k)
-        obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.obs_dimension, k)
+        x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigma, self.noise_Q, self.states_dimension, k)
+        obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.noise_R, self.obs_dimension, k)
+
         P_xz = x_dev*np.diag(self.W_cov)*z_dev.T
         K = P_xz * np.linalg.inv(P_zz)
         x_posterior = x_mean + K*(sensor_data - obs_mean)
         P_posterior = P_xx - K*P_zz*K.T
-        DEBUG_P_posterior = np.linalg.eigvals(P_posterior)
         return(x_posterior, P_posterior)
 

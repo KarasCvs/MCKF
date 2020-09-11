@@ -53,6 +53,9 @@ X = sigmas(x,P,c);                            %sigma points around x
 P12 = X2*diag(Wc)*Z2';                        %transformed cross-covariance  % X2=X1-x1, x1是加权均值.
 K = P12/P2;
 x = x1+K*(z-z1);                              %state update
-P = real(P1-K*P12');                                %covariance update
-% disp(eig(P));
+% P = real(P1-K*P12');                                %covariance update
+P = P1-K*P2*K';
+if find(eig(P)<0)
+    disp(eig(P));
+end
 % disp("P=");disp(P);
