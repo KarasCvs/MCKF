@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import functions.nonlinear_func as N_func
 # from mckf.mckf import MCKF
 # from kf.kf import KF
-from . import ukf
+from . import ukf_2
 
 
 class UKF_Sim():
@@ -40,7 +40,7 @@ class UKF_Sim():
 
     # --------------------------------UKF init---------------------------------- #
     def ukf_init(self, alpha_=1e-3, beta_=2, ki_=0):
-        self.ukf = ukf.UKF()
+        self.ukf = ukf_2.UKF()
         self.ukf.state_func(N_func.state_func, N_func.observation_func, self.Ts)
         self.ukf.filter_init(self.states_dimension, self.obs_dimension, self.noise_q, self.noise_r)
         self.ukf.ut_init(alpha_, beta_, ki_)

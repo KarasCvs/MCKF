@@ -22,13 +22,11 @@ class UKF():
         self.ki = ki
         self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.ki) - self.states_dimension
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
-        self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
-                       0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
+        self.W_mean = ((1-self.alpha)/2*self.states_dimension+np.zeros((1, 2*self.states_dimension+1))).reshape(self.states_dimension*2+1,)
         self.W_cov = self.W_mean
-        self.W_cov[0] = self.W_mean[0] + (1 - self.alpha*self.alpha + self.beta)                # only the first one is different
 
     def sigma_points(self, x_prior, P):
-        sigma_A_ = np.linalg.cholesky((self.c_) * P)
+        sigma_A_ = np.linalg.cholesky((self.states_dimension/(1-self.alpha)) * P)
         sigma_X_ = x_prior * np.ones((1, self.states_dimension))
         X_sigmas = np.hstack((x_prior, sigma_X_+sigma_A_, sigma_X_-sigma_A_))
         return X_sigmas
