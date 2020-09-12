@@ -21,10 +21,23 @@ import numpy as np
 #     return observation
 
 # Nonlinear func NO.2, from paper[Maximum correntropy unscented filter]
+# def state_func(states, k=0, Ts=0.1):
+#     states_ = np.zeros(3).reshape(3, 1)
+#     states_[0] = states[0] + Ts*states[2]
+#     states_[1] = states[1] + Ts*2*math.exp(-states[0]/20000) * pow(states[1], 2)*states[2]/2 - Ts*32.2
+#     states_[2] = states[2]
+#     return states_
+
+
+# def observation_func(states, k=0, Ts=0.1):
+#     observation = np.zeros(1).reshape(1, 1)
+#     observation[0] = math.sqrt(pow(pow(100000, 2)+(states[0]-100000), 2))
+#     return observation
+# No.3
 def state_func(states, k=0, Ts=0.1):
     states_ = np.zeros(3).reshape(3, 1)
-    states_[0] = states[0] + Ts*states[2]
-    states_[1] = states[1] + Ts*2*math.exp(-states[0]/20000) * pow(states[1], 2)*states[2]/2 - Ts*32.2
+    states_[0] = states[0] + Ts*(-states[2])
+    states_[1] = states[1] + Ts * (-math.exp(-states[0]*5e-5) * pow(states[1], 2)*states[2])
     states_[2] = states[2]
     return states_
 
