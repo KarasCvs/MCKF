@@ -11,12 +11,12 @@ from . import ukf
 
 class UKF_Sim():
     # --------------------------------init---------------------------------- #
-    def __init__(self, states_dimension, obs_dimension):
-        self.sys_init(states_dimension, obs_dimension)
+    def __init__(self, states_dimension, obs_dimension, t=10, Ts=0.01):
+        self.sys_init(states_dimension, obs_dimension, t, Ts)
         self.noise_init()
         self.ukf_init()
 
-    def sys_init(self, states_dimension, obs_dimension, t=10, Ts=0.01,):
+    def sys_init(self, states_dimension, obs_dimension, t, Ts):
         self.states_dimension = states_dimension
         self.obs_dimension = obs_dimension
         self.t = t
@@ -53,42 +53,60 @@ class UKF_Sim():
         self.P = np.diag(P0)
 
     def run(self):
+        self.sys_only = False
         # --------------------------------main procedure---------------------------------- #
-        # system No.1
-        # for i in range(1, self.N):
-        # states[:, 0] = np.array([0.3, 0.2, 1, 2]).reshape(states_dimension, 1)
-        # self.ukf_states[:, 0] = np.array([0.3, 0.2, 1, 2]).reshape(states_dimension, 1)
-        # P = np.diag([1, 1, 1, 1])
-
-        # system No.2
         for i in range(1, self.N):
             # 步进
             self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts) + self.state_noise[:, i]
             self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
-            self.sensor[:, i] = self.real_obs[:, i-1] + self.observation_noise[:, i]
+            self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
             self.ukf_states[:, i], self.P = self.ukf.estimate(self.ukf_states[:, i-1], self.sensor[:, i], self.P, i)
-            self.ukf_MSE[:, i] = pow(np.mean(self.states[:, i] - self.ukf_obs[:, i]), 2)
+            self.ukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.ukf_states[0, i]))
+
+    def system_only(self):
+        self.sys_only = True
+        for i in range(1, self.N):
+            # 步进
+            self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts) + self.state_noise[:, i]
+            self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
+            self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
 
     def plot(self):
-        for i in range(self.states_dimension):
-            plt.figure(1)
-            plt.subplot(100*self.states_dimension+11+i)
-            # plt.plot(self.time_line, self.sensor[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
-            # plt.plot(self.time_line, self.ukf_states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="UKF")
-            plt.plot(self.time_line, self.states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Real State")
+        if self.sys_only:
+            for i in range(self.states_dimension):
+                plt.figure(1)
+                plt.subplot(100*self.states_dimension+11+i)
+                plt.plot(self.time_line, self.states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Real State")
+                plt.grid(True)
+                plt.legend(loc='upper left')
+                plt.title("States")
+            plt.figure(2)
+            plt.plot(self.time_line, self.sensor.A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
+            plt.plot(self.time_line, self.real_obs.A.reshape(self.N,), linewidth=1, linestyle="-", label="Real obs")
             plt.grid(True)
             plt.legend(loc='upper left')
-            # plt MSE
-        plt.figure(2)
-        plt.plot(self.time_line, self.ukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="ukf MSE")
-        # plt.plot(self.time_line, sensor_MSE[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="self.sensor MSE")
-        plt.grid(True)
-        plt.legend(loc='upper left')
-        plt.figure(3)
-        # plt.plot(self.time_line, self.sensor.A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
-        plt.plot(self.time_line, self.real_obs.A.reshape(self.N,), linewidth=1, linestyle="-", label="Real obs")
-        plt.grid(True)
-        plt.legend(loc='upper left')
+            plt.title("Observation")
+        else:
+            for i in range(self.states_dimension):
+                plt.figure(1)
+                plt.subplot(100*self.states_dimension+11+i)
+                plt.plot(self.time_line, self.ukf_states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="UKF")
+                plt.plot(self.time_line, self.states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Real State")
+                plt.grid(True)
+                plt.legend(loc='upper left')
+                plt.title("States")
+            plt.figure(2)
+            plt.plot(self.time_line, self.sensor.A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
+            plt.plot(self.time_line, self.real_obs.A.reshape(self.N,), linewidth=1, linestyle="-", label="Real obs")
+            plt.grid(True)
+            plt.legend(loc='upper left')
+            plt.title("Observation")
+            plt.figure(3)
+            plt.plot(self.time_line, self.ukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="ukf MSE")
+            # plt.plot(self.time_line, self.sensor_MSE[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="self.sensor MSE")
+            plt.grid(True)
+            plt.legend(loc='upper left')
+            plt.title("MSE")
         plt.show()
 
 

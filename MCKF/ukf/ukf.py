@@ -36,18 +36,7 @@ class UKF():
         X_sigma = np.hstack((x_prior, sigma_Y_+sigma_A_, sigma_Y_-sigma_A_))
         return X_sigma
 
-    def ut_states(self, transfunc, ut_input, Noise, dimension, k):
-        cols = ut_input.shape[1]
-        trans_mean = np.mat(np.zeros((dimension, 1)))
-        trans_points = np.mat(np.zeros((dimension, cols)))
-        for i in range(cols):
-            trans_points[:, i] = ut_input[:, i] + transfunc(ut_input[:, i], k, self.Ts)*self.Ts
-            trans_mean = trans_mean + self.W_mean[i] * trans_points[:, i]
-        trans_dev = trans_points - trans_mean*np.ones((1, cols))
-        trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T + Noise
-        return trans_mean, trans_points, trans_cov, trans_dev
-
-    def ut_obs(self, transfunc, ut_input, Noise, dimension, k):
+    def ut(self, transfunc, ut_input, Noise, dimension, k):
         cols = ut_input.shape[1]
         trans_mean = np.mat(np.zeros((dimension, 1)))
         trans_points = np.mat(np.zeros((dimension, cols)))
@@ -60,12 +49,11 @@ class UKF():
 
     def estimate(self, x_prior, sensor_data, P, k):
         X_sigma = self.sigma_points(x_prior, P)
-        x_mean, x_points, P_xx, x_dev = self.ut_states(self.F, X_sigma, self.noise_Q, self.states_dimension, k)
-        obs_mean, obs_points, P_zz, z_dev = self.ut_obs(self.H, x_points, self.noise_R, self.obs_dimension, k)
+        x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigma, self.noise_Q, self.states_dimension, k)
+        obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.noise_R, self.obs_dimension, k)
 
         P_xz = x_dev*np.diag(self.W_cov)*z_dev.T
         K = P_xz * np.linalg.inv(P_zz+self.noise_R)
         x_posterior = x_mean + K*(sensor_data - obs_mean)
         P_posterior = P_xx - K*P_zz*K.T
         return(x_posterior, P_posterior)
-
