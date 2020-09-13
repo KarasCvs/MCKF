@@ -2,15 +2,15 @@ import numpy as np
 from numpy.random import randn
 import matplotlib.pyplot as plt
 import functions.nonlinear_func as N_func
-from . import ukf as UKF
+from . import mcukf as MCUKF
 
 
-class UKF_Sim():
+class MCUKF_Sim():
     # --------------------------------init---------------------------------- #
-    def __init__(self, states_dimension, obs_dimension, t, Ts, alpha_, beta_, ki_, q_, r_):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, alpha_, beta_, ki_, sigma_, eps_, q_, r_):
         self.sys_init(states_dimension, obs_dimension, t, Ts)
         self.noise_init(q_, r_)
-        self.ukf_init(alpha_, beta_, ki_)
+        self.mcukf_init(sigma_, eps_, alpha_, beta_, ki_)
 
     def sys_init(self, states_dimension, obs_dimension, t, Ts):
         self.states_dimension = states_dimension
@@ -35,11 +35,12 @@ class UKF_Sim():
         self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + 0*randn(self.obs_dimension, self.N))
 
     # --------------------------------UKF init---------------------------------- #
-    def ukf_init(self, alpha_, beta_, ki_):
-        self.ukf = UKF.UKF()
-        self.ukf.state_func(N_func.state_func, N_func.observation_func, self.Ts)
-        self.ukf.filter_init(self.states_dimension, self.obs_dimension, self.noise_q, self.noise_r)
-        self.ukf.ut_init(alpha_, beta_, ki_)
+    def mcukf_init(self, sigma_, eps_, alpha_, beta_, ki_):
+        self.mcukf = MCUKF.MCUKF()
+        self.mcukf.filter_init(self.states_dimension, self.obs_dimension, self.noise_q, self.noise_r)
+        self.mcukf.mc_init(sigma_, eps_)
+        self.mcukf.ut_init(alpha_, beta_, ki_)
+        self.mcukf.state_func(N_func.state_func, N_func.observation_func, self.Ts)
 
     def states_init(self, X0, ukf0, P0):
         self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)
@@ -56,7 +57,7 @@ class UKF_Sim():
             self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
             self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
-            self.ukf_states[:, i], self.P = self.ukf.estimate(self.ukf_states[:, i-1], self.sensor[:, i], self.P, i)
+            self.ukf_states[:, i], self.P = self.mcukf.estimate(self.ukf_states[:, i-1], self.sensor[:, i], self.P, i)
             self.ukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.ukf_states[0, i]))
 
     def system_only(self):
