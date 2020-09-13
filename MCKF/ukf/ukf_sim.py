@@ -1,12 +1,8 @@
 import numpy as np
 from numpy.random import randn
 import matplotlib.pyplot as plt
-# from scipy.stats import norm
-
 import functions.nonlinear_func as N_func
-# from mckf.mckf import MCKF
-# from kf.kf import KF
-from . import ukf_2
+from . import ukf as UKF
 
 
 class UKF_Sim():
@@ -40,7 +36,7 @@ class UKF_Sim():
 
     # --------------------------------UKF init---------------------------------- #
     def ukf_init(self, alpha_=1e-3, beta_=2, ki_=0):
-        self.ukf = ukf_2.UKF()
+        self.ukf = UKF.UKF()
         self.ukf.state_func(N_func.state_func, N_func.observation_func, self.Ts)
         self.ukf.filter_init(self.states_dimension, self.obs_dimension, self.noise_q, self.noise_r)
         self.ukf.ut_init(alpha_, beta_, ki_)
@@ -57,7 +53,7 @@ class UKF_Sim():
         # --------------------------------main procedure---------------------------------- #
         for i in range(1, self.N):
             # 步进
-            self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts) + self.state_noise[:, i]
+            self.states[:, i] = N_func.state_func(self.states[:, i-1], i, self.Ts) + self.state_noise[:, i]
             self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
             self.ukf_states[:, i], self.P = self.ukf.estimate(self.ukf_states[:, i-1], self.sensor[:, i], self.P, i)
@@ -67,7 +63,7 @@ class UKF_Sim():
         self.sys_only = True
         for i in range(1, self.N):
             # 步进
-            self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts) + self.state_noise[:, i]
+            self.states[:, i] = N_func.state_func(self.states[:, i-1], i, self.Ts) + self.state_noise[:, i]
             self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
 
