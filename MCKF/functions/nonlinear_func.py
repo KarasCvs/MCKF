@@ -36,14 +36,14 @@ def observation_func(states, Ts=0, k=0):
 # No.3
 # def state_func(states, Ts, k=0):
 #     states_ = np.zeros(3).reshape(3, 1)
-#     states_[0] = states[0] + Ts*(-states[1])
-#     states_[1] = states[1] + Ts * (-math.exp(-states[0]*5e-5) * pow(states[1], 2)*states[2])
+#     states_[0] = states[0] + Ts*states[1]
+#     states_[1] = states[1] + Ts*(2*math.exp(-states[0]/2e4) * states[1] * states[1] * states[2]/2 - 32.2)
 #     states_[2] = states[2]
 #     return states_
 
 
-# def observation_func(states, Ts, k=0):
-#     observation = math.sqrt(pow(1e5, 2) + pow((states[0]-1e5), 2))
+# def observation_func(states, Ts=0, k=0):
+#     observation = 0.01*states[0]
 #     return observation
 
 

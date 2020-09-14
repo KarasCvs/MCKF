@@ -21,12 +21,12 @@ class UKF():
         self.noise_Q = q*q * np.identity(self.states_dimension)
         self.noise_R = r*r * np.identity(self.obs_dimension)
 
-    def ut_init(self, alpha=1e-3, beta=2, ki=0):
+    def ut_init(self, alpha=1e-3, beta=2, kappa=0):
         self.alpha = alpha
         self.beta = beta
-        self.ki = ki
+        self.kappa = kappa
         # actually he just have use a constant as lambda, but this is apparently better.
-        self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.ki) - self.states_dimension
+        self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
         self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
                        0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
@@ -37,7 +37,9 @@ class UKF():
         self.k = k
         X_sigmas = self.sigma_points(x_prior, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas, self.noise_Q, self.states_dimension)
-        obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.noise_R, self.obs_dimension)
+        # obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.noise_R, self.obs_dimension)
+        Y_sigmas = self.sigma_points(x_mean, P_xx)
+        obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, Y_sigmas, self.noise_R, self.obs_dimension)
         # posterior
         P_xz = x_dev*np.diag(self.W_cov)*z_dev.T
         K = P_xz * np.linalg.inv(P_zz)
