@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import randn
 import matplotlib.pyplot as plt
 import functions.nonlinear_func as N_func
-from . import mcukf as MCUKF
+from . import mcukf3 as MCUKF
 
 
 class MCUKF_Sim():

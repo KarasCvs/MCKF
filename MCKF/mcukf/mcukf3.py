@@ -1,10 +1,5 @@
-# This is a ukf based on the paper
-# <A New Method for the Nonlinear Transformation of Means and Covariances in Filters and Estimators>
-# written by Jeffrey Uhlmann.
-# The biggest different between this and robot_localization is
-# the calculation of covariance weights.
-# I think this mathod let the first weight to be a very small negative number
-# is the reason cause the P_xx negative-definite.
+# This is a ukf based on the paper oldest references.
+# Like the original one and Katayama's book
 import numpy as np
 from numpy.linalg import cholesky
 
@@ -29,12 +24,11 @@ class MCUKF():
         self.beta = beta
         self.kappa = kappa
         # actually he just have use a constant as lambda, but this is apparently better.
-        self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension
+        self.lambda_ = 3
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
         self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
                        0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
-        self.W_cov = self.W_mean    # Different with robot_localization
-        # self.W_cov[0] = self.W_cov[0] + (1-self.alpha*self.alpha+self.beta)
+        self.W_cov = self.W_mean               # Different with robot_localization
 
     def mc_init(self, sigma, eps):
         self.kernel_G = lambda x: np.exp(-((x*x)/(2*sigma*sigma)))
