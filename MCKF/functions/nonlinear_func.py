@@ -12,7 +12,7 @@ import numpy as np
 #     return states_
 
 
-# def observation_func(states, Ts, k=0):
+# def observation_func(states, Ts=0, k=0):
 #     observation = np.zeros(4).reshape(4, 1)
 #     observation[0] = math.sqrt(abs(states[0]+1))
 #     observation[1] = 0.8*states[1] + 0.3*states[0]

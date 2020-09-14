@@ -38,8 +38,8 @@ class UKF():
         X_sigmas = self.sigma_points(x_prior, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas, self.noise_Q, self.states_dimension)
         # obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.noise_R, self.obs_dimension)
-        Y_sigmas = self.sigma_points(x_mean, P_xx)
-        obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, Y_sigmas, self.noise_R, self.obs_dimension)
+        Z_sigmas = self.sigma_points(x_mean, P_xx)
+        obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, Z_sigmas, self.noise_R, self.obs_dimension)
         # posterior
         P_xz = x_dev*np.diag(self.W_cov)*z_dev.T
         K = P_xz * np.linalg.inv(P_zz)

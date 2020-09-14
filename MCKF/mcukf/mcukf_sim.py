@@ -87,7 +87,7 @@ class MCUKF_Sim():
             for i in range(self.states_dimension):
                 plt.figure(1)
                 plt.subplot(100*self.states_dimension+11+i)
-                plt.plot(self.time_line, self.ukf_states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="UKF")
+                plt.plot(self.time_line, self.ukf_states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="MCUKF")
                 plt.plot(self.time_line, self.states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Real State")
                 plt.grid(True)
                 plt.legend(loc='upper left')
@@ -99,7 +99,7 @@ class MCUKF_Sim():
             plt.legend(loc='upper left')
             plt.title("Observation")
             plt.figure(3)
-            plt.plot(self.time_line, self.ukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="ukf MSE")
+            plt.plot(self.time_line, self.ukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="mcukf MSE")
             # plt.plot(self.time_line, self.sensor_MSE[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="self.sensor MSE")
             plt.grid(True)
             plt.legend(loc='upper left')
