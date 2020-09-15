@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import randn
 import matplotlib.pyplot as plt
 import functions.nonlinear_func as N_func
-from . import ukf3 as UKF
+from . import ukf as UKF
 
 
 class UKF_Sim():
@@ -48,17 +48,20 @@ class UKF_Sim():
         self.sensor[:, 0] = self.real_obs[:, 0] + self.observation_noise[:, 0]
         self.P = np.diag(P0)
 
+    def read_data(self, states, obs):
+        self.states = states
+        self.real_obs = obs
+
     def run(self):
         self.sys_only = False
         # --------------------------------main procedure---------------------------------- #
         for i in range(1, self.N):
-            # 步进
-            self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
-            self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
+            # self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
+            # self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
             self.ukf_states[:, i], self.P = self.ukf.estimate(self.ukf_states[:, i-1], self.sensor[:, i], self.P, i)
             self.ukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.ukf_states[0, i]))
-        return self.time_line, self.states, self.real_obs, self.sensor, self.ukf_states, self.ukf_MSE
+        return self.time_line, self.ukf_states, self.ukf_MSE
 
     def system_only(self):
         self.sys_only = True

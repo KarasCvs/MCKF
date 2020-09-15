@@ -49,62 +49,38 @@ class MCUKF_Sim():
         self.sensor[:, 0] = self.real_obs[:, 0] + self.observation_noise[:, 0]
         self.P = np.diag(P0)
 
+    def read_data(self, states, obs):
+        self.states = states
+        self.real_obs = obs
+
     def run(self):
-        self.sys_only = False
         # --------------------------------main procedure---------------------------------- #
         for i in range(1, self.N):
-            # 步进
-            self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
-            self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
             self.mcukf_states[:, i], self.P = self.mcukf.estimate(self.mcukf_states[:, i-1], self.sensor[:, i], self.P, i)
             self.mcukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.mcukf_states[0, i]))
-        return self.time_line, self.states, self.real_obs, self.sensor, self.mcukf_states, self.mcukf_MSE
-
-    def system_only(self):
-        self.sys_only = True
-        for i in range(1, self.N):
-            # 步进
-            self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
-            self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
-            self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
-        return self.time_line, self.states, self.real_obs, self.sensor
+        return self.time_line, self.mcukf_states, self.mcukf_MSE
 
     def plot(self):
-        if self.sys_only:
-            for i in range(self.states_dimension):
-                plt.figure(1)
-                plt.subplot(100*self.states_dimension+11+i)
-                plt.plot(self.time_line, self.states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Real State")
-                plt.grid(True)
-                plt.legend(loc='upper left')
-                plt.title("States")
-            plt.figure(2)
-            plt.plot(self.time_line, self.sensor.A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
-            plt.plot(self.time_line, self.real_obs.A.reshape(self.N,), linewidth=1, linestyle="-", label="Real obs")
+        for i in range(self.states_dimension):
+            plt.figure(1)
+            plt.subplot(100*self.states_dimension+11+i)
+            plt.plot(self.time_line, self.mcukf_states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="MCUKF")
+            plt.plot(self.time_line, self.states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Real State")
             plt.grid(True)
             plt.legend(loc='upper left')
-            plt.title("Observation")
-        else:
-            for i in range(self.states_dimension):
-                plt.figure(1)
-                plt.subplot(100*self.states_dimension+11+i)
-                plt.plot(self.time_line, self.mcukf_states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="MCUKF")
-                plt.plot(self.time_line, self.states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Real State")
-                plt.grid(True)
-                plt.legend(loc='upper left')
-                plt.title("States")
-            plt.figure(2)
-            plt.plot(self.time_line, self.mcukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="mcukf MSE")
-            plt.grid(True)
-            plt.legend(loc='upper left')
-            plt.title("MSE")
-            plt.figure(3)
-            plt.plot(self.time_line, self.sensor.A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
-            plt.plot(self.time_line, self.real_obs.A.reshape(self.N,), linewidth=1, linestyle="-", label="Real obs")
-            plt.grid(True)
-            plt.legend(loc='upper left')
-            plt.title("Observation")
+            plt.title("States")
+        plt.figure(2)
+        plt.plot(self.time_line, self.mcukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="mcukf MSE")
+        plt.grid(True)
+        plt.legend(loc='upper left')
+        plt.title("MSE")
+        plt.figure(3)
+        plt.plot(self.time_line, self.sensor.A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
+        plt.plot(self.time_line, self.real_obs.A.reshape(self.N,), linewidth=1, linestyle="-", label="Real obs")
+        plt.grid(True)
+        plt.legend(loc='upper left')
+        plt.title("Observation")
         plt.show()
 
 

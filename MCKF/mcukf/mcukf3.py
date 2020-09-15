@@ -91,10 +91,6 @@ class MCUKF():
             trans_mean = trans_mean + self.W_mean[i] * trans_points[:, i]
         trans_dev = trans_points - trans_mean*np.ones((1, cols))
         trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T + Noise_cov
-        try:
-            cholesky(trans_cov)
-        except:
-            print("here")
         return trans_mean, trans_points, trans_cov, trans_dev
 
     def mc(self, E):
