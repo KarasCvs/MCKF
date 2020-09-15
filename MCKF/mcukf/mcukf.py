@@ -1,10 +1,11 @@
-# This is a ukf based on the paper
-# <A New Method for the Nonlinear Transformation of Means and Covariances in Filters and Estimators>
+# This ukf useing the same mathod to calculate W_c and W_m with
+# <A New Method for the Nonlinear Transformation of Means and Covariances in Filters and Estimators>(No.3)
 # written by Jeffrey Uhlmann.
-# The biggest different between this and robot_localization is
-# the calculation of covariance weights.
+# Witch is different with robot_localization(No.2).
 # I think this mathod let the first weight to be a very small negative number
 # is the reason cause the P_xx negative-definite.
+# But I'm using the way that (No.2) using to calculate lambda with alpha beta and kappa.
+# That's the different between this and (No.3).
 import numpy as np
 from numpy.linalg import cholesky
 
@@ -75,10 +76,6 @@ class MCUKF():
         x_posterior = x_new_mc
         P_posterior = (np.eye(self.states_dimension)-K*H_mc)*P_xx*(np.eye(self.states_dimension)-K*H_mc).T \
             + K*self.noise_R*K.T
-        try:
-            cholesky(P_posterior)
-        except:
-            print("here")
         return(x_posterior, P_posterior)
 
     def sigma_points(self, x_prior, P):
@@ -96,10 +93,6 @@ class MCUKF():
             trans_mean = trans_mean + self.W_mean[i] * trans_points[:, i]
         trans_dev = trans_points - trans_mean*np.ones((1, cols))
         trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T + Noise_cov
-        try:
-            cholesky(trans_cov)
-        except:
-            print("here")
         return trans_mean, trans_points, trans_cov, trans_dev
 
     def mc(self, E):

@@ -1,8 +1,11 @@
-# This is a ukf based on the paper
-# <A New Method for the Nonlinear Transformation of Means and Covariances in Filters and Estimators>
+# This ukf useing the same mathod to calculate W_c and W_m with
+# <A New Method for the Nonlinear Transformation of Means and Covariances in Filters and Estimators>(No.3)
 # written by Jeffrey Uhlmann.
-# The biggest different between this and robot_localization is
-# the calculation of covariance weights.
+# Witch is different with robot_localization(No.2).
+# I think this mathod let the first weight to be a very small negative number
+# is the reason cause the P_xx negative-definite.
+# But I'm using the way that (No.2) using to calculate lambda with alpha beta and kappa.
+# That's the different between this and (No.3).
 import numpy as np
 
 

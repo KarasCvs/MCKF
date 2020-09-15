@@ -22,11 +22,11 @@ class MCUKF_Sim():
         self.states = np.mat(np.zeros((states_dimension, self.N)))
         self.sensor = np.mat(np.zeros((obs_dimension, self.N)))
         self.real_obs = np.mat(np.zeros((obs_dimension, self.N)))
-        self.ukf_states = np.mat(np.zeros((states_dimension, self.N)))
+        self.mcukf_states = np.mat(np.zeros((states_dimension, self.N)))
         self.ukf_obs = np.mat(np.zeros((obs_dimension, self.N)))
         self.P = np.mat(np.identity(states_dimension))
         self.sensor_MSE = np.mat(np.zeros((obs_dimension, self.N)))
-        self.ukf_MSE = np.mat(np.zeros((obs_dimension, self.N)))
+        self.mcukf_MSE = np.mat(np.zeros((obs_dimension, self.N)))
 
     def noise_init(self, q, r):
         self.noise_q = q             # 系统噪音
@@ -44,7 +44,7 @@ class MCUKF_Sim():
 
     def states_init(self, X0, ukf0, P0):
         self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)
-        self.ukf_states[:, 0] = np.array(ukf0).reshape(self.states_dimension, 1)
+        self.mcukf_states[:, 0] = np.array(ukf0).reshape(self.states_dimension, 1)
         self.real_obs[:, 0] = N_func.observation_func(self.states[:, 0])
         self.sensor[:, 0] = self.real_obs[:, 0] + self.observation_noise[:, 0]
         self.P = np.diag(P0)
@@ -57,8 +57,9 @@ class MCUKF_Sim():
             self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
             self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
-            self.ukf_states[:, i], self.P = self.mcukf.estimate(self.ukf_states[:, i-1], self.sensor[:, i], self.P, i)
-            self.ukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.ukf_states[0, i]))
+            self.mcukf_states[:, i], self.P = self.mcukf.estimate(self.mcukf_states[:, i-1], self.sensor[:, i], self.P, i)
+            self.mcukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.mcukf_states[0, i]))
+        return self.time_line, self.states, self.real_obs, self.sensor, self.mcukf_states, self.mcukf_MSE
 
     def system_only(self):
         self.sys_only = True
@@ -67,6 +68,7 @@ class MCUKF_Sim():
             self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
             self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
+        return self.time_line, self.states, self.real_obs, self.sensor
 
     def plot(self):
         if self.sys_only:
@@ -87,23 +89,22 @@ class MCUKF_Sim():
             for i in range(self.states_dimension):
                 plt.figure(1)
                 plt.subplot(100*self.states_dimension+11+i)
-                plt.plot(self.time_line, self.ukf_states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="MCUKF")
+                plt.plot(self.time_line, self.mcukf_states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="MCUKF")
                 plt.plot(self.time_line, self.states[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="Real State")
                 plt.grid(True)
                 plt.legend(loc='upper left')
                 plt.title("States")
             plt.figure(2)
+            plt.plot(self.time_line, self.mcukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="mcukf MSE")
+            plt.grid(True)
+            plt.legend(loc='upper left')
+            plt.title("MSE")
+            plt.figure(3)
             plt.plot(self.time_line, self.sensor.A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
             plt.plot(self.time_line, self.real_obs.A.reshape(self.N,), linewidth=1, linestyle="-", label="Real obs")
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title("Observation")
-            plt.figure(3)
-            plt.plot(self.time_line, self.ukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="mcukf MSE")
-            # plt.plot(self.time_line, self.sensor_MSE[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="self.sensor MSE")
-            plt.grid(True)
-            plt.legend(loc='upper left')
-            plt.title("MSE")
         plt.show()
 
 

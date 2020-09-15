@@ -2,6 +2,9 @@
 # <Major development under Gaussian filtering since unscented Kalman filter> has used somthing likely
 # The biggest different between this and Jeffrey Uhlmann is
 # the calculation of covariance weights.
+# This method use alpha beta and kappa to calculate lambda which is little bigger than -1*states_dimension
+# This method should have a better result but could cause P_xx negative_definite when
+# Ts is not small enough.
 import numpy as np
 
 

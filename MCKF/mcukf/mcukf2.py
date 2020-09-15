@@ -1,6 +1,10 @@
-# This is a ukf based on the paper oldest references.
-# Like the original one and Katayama's book
-# Tis mathod use a self-definition lambda, I set it equal to states dimension
+# This is a ukf based on the robot_localization and
+# <Major development under Gaussian filtering since unscented Kalman filter> has used somthing likely
+# The biggest different between this and Jeffrey Uhlmann is
+# the calculation of covariance weights.
+# This method use alpha beta and kappa to calculate lambda which is little bigger than -1*states_dimension
+# This method should have a better result but could cause P_xx negative_definite when
+# Ts is not small enough.
 import numpy as np
 from numpy.linalg import cholesky
 
@@ -25,11 +29,12 @@ class MCUKF():
         self.beta = beta
         self.kappa = kappa
         # actually he just have use a constant as lambda, but this is apparently better.
-        self.lambda_ = 3
+        self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
         self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
                        0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
-        self.W_cov = self.W_mean               # Different with robot_localization
+        self.W_cov = self.W_mean    # Different with robot_localization
+        self.W_cov[0] = self.W_cov[0] + (1-self.alpha*self.alpha+self.beta)
 
     def mc_init(self, sigma, eps):
         self.kernel_G = lambda x: np.exp(-((x*x)/(2*sigma*sigma)))
@@ -70,10 +75,6 @@ class MCUKF():
         x_posterior = x_new_mc
         P_posterior = (np.eye(self.states_dimension)-K*H_mc)*P_xx*(np.eye(self.states_dimension)-K*H_mc).T \
             + K*self.noise_R*K.T
-        try:
-            cholesky(P_posterior)
-        except:
-            print("here")
         return(x_posterior, P_posterior)
 
     def sigma_points(self, x_prior, P):

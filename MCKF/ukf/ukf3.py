@@ -1,5 +1,6 @@
 # This is a ukf based on the paper oldest references.
 # Like the original one and Katayama's book
+# Tis mathod use a self-definition lambda, I set it equal to states dimension
 import numpy as np
 
 

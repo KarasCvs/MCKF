@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import randn
 import matplotlib.pyplot as plt
 import functions.nonlinear_func as N_func
-from . import ukf as UKF
+from . import ukf3 as UKF
 
 
 class UKF_Sim():
@@ -58,6 +58,7 @@ class UKF_Sim():
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
             self.ukf_states[:, i], self.P = self.ukf.estimate(self.ukf_states[:, i-1], self.sensor[:, i], self.P, i)
             self.ukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.ukf_states[0, i]))
+        return self.time_line, self.states, self.real_obs, self.sensor, self.ukf_states, self.ukf_MSE
 
     def system_only(self):
         self.sys_only = True
@@ -66,6 +67,7 @@ class UKF_Sim():
             self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
             self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
+        return self.time_line, self.states, self.real_obs, self.sensor
 
     def plot(self):
         if self.sys_only:
@@ -92,17 +94,16 @@ class UKF_Sim():
                 plt.legend(loc='upper left')
                 plt.title("States")
             plt.figure(2)
+            plt.plot(self.time_line, self.ukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="ukf MSE")
+            plt.grid(True)
+            plt.legend(loc='upper left')
+            plt.title("MSE")
+            plt.figure(3)
             plt.plot(self.time_line, self.sensor.A.reshape(self.N,), linewidth=1, linestyle="-", label="Sensor")
             plt.plot(self.time_line, self.real_obs.A.reshape(self.N,), linewidth=1, linestyle="-", label="Real obs")
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title("Observation")
-            plt.figure(3)
-            plt.plot(self.time_line, self.ukf_MSE.A.reshape(self.N,), linewidth=1, linestyle="-", label="ukf MSE")
-            # plt.plot(self.time_line, self.sensor_MSE[i, :].A.reshape(self.N,), linewidth=1, linestyle="-", label="self.sensor MSE")
-            plt.grid(True)
-            plt.legend(loc='upper left')
-            plt.title("MSE")
         plt.show()
 
 
