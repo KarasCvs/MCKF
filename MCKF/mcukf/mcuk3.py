@@ -1,6 +1,11 @@
-# This is a ukf based on the paper oldest references.
-# Like the original one and Katayama's book
-# Tis mathod use a self-definition lambda, I set it equal to states dimension
+# This ukf useing the same mathod to calculate W_c and W_m with
+# <A New Method for the Nonlinear Transformation of Means and Covariances in Filters and Estimators>(No.3)
+# written by Jeffrey Uhlmann.
+# Witch is different with robot_localization(No.2).
+# I think this mathod let the first weight to be a very small negative number
+# is the reason cause the P_xx negative-definite.
+# But I'm using the way that (No.2) using to calculate lambda with alpha beta and kappa.
+# That's the different between this and (No.3).
 import numpy as np
 from numpy.linalg import cholesky
 
@@ -25,11 +30,12 @@ class MCUKF():
         self.beta = beta
         self.kappa = kappa
         # actually he just have use a constant as lambda, but this is apparently better.
-        self.lambda_ = 3
+        self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
         self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
                        0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
-        self.W_cov = self.W_mean               # Different with robot_localization
+        self.W_cov = self.W_mean    # Different with robot_localization
+        # self.W_cov[0] = self.W_cov[0] + (1-self.alpha*self.alpha+self.beta)
 
     def mc_init(self, sigma, eps):
         self.kernel_G = lambda x: np.exp(-((x*x)/(2*sigma*sigma)))
@@ -70,10 +76,6 @@ class MCUKF():
         x_posterior = x_new_mc
         P_posterior = (np.eye(self.states_dimension)-K*H_mc)*P_xx*(np.eye(self.states_dimension)-K*H_mc).T \
             + K*self.noise_R*K.T
-        try:
-            cholesky(P_posterior)
-        except:
-            print("here")
         return(x_posterior, P_posterior)
 
     def sigma_points(self, x_prior, P):

@@ -7,7 +7,7 @@ from nonlinear_system import NonlinearSys
 if __name__ == "__main__":
     states_dimension = 3
     obs_dimension = 1
-    repeat = 50
+    repeat = 1
     t = 50
     Ts = 0.1
     N = int(t/Ts)
