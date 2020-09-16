@@ -7,9 +7,9 @@ from nonlinear_system import NonlinearSys
 if __name__ == "__main__":
     states_dimension = 3
     obs_dimension = 1
-    repeat = 2
+    repeat = 50
     t = 50
-    Ts = 0.01
+    Ts = 0.1
     N = int(t/Ts)
     alpha = 1e-3
     beta = 10
@@ -29,22 +29,28 @@ if __name__ == "__main__":
     for i in range(repeat):
         # 顺序: x维度, y维度, 时间, 采样间隔, α, β, kappa, q, r
         ukf_sim = UKF_Sim(states_dimension, obs_dimension, t, Ts, alpha, beta, kappa, q, r)
-        ukf_sim.states_init([3e5, -2e4, 1e-3], [3e5, -2e4, 1e-3], [1e6, 4e6, 1e-6])
+        ukf_sim.states_init([3e5, -2e4, 1e-3], [3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
         ukf_sim.read_data(states, real_obs)
-        _, ukf_states, ukf_MSE = ukf_sim.run()
+        _, ukf_states = ukf_sim.run()
+        ukf_MSE_1 = ukf_sim.MSE()
 
         # 顺序: x维度, y维度, 时间, 采样间隔, α, β, kappa, sigma, eps, q, r
         mcukf_sim = MCUKF_Sim(states_dimension, obs_dimension, t, Ts, alpha, beta, kappa, sigma, eps, q, r)
-        mcukf_sim.states_init([3e5, -2e4, 1e-3], [3e5, -2e4, 1e-3], [1e6, 4e6, 1e-6])
+        mcukf_sim.states_init([3e5, -2e4, 1e-3], [3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
         mcukf_sim.read_data(states, real_obs)
-        _, mcukf_states, mcukf_MSE = mcukf_sim.run()
+        _, mcukf_states = mcukf_sim.run()
+        mcukf_MSE_1 = mcukf_sim.MSE()
 
-        mean_ukf_MSE += ukf_MSE
-        mean_mcukf_MSE += mcukf_MSE
-    mean_ukf_MSE = mean_ukf_MSE/repeat
-    mean_mcukf_MSE = mean_ukf_MSE/repeat
+        # MSE
+        ukf_MSE_1 += ukf_MSE_1
+        mcukf_MSE_1 += mcukf_MSE_1
+    ukf_MSE_1 = ukf_MSE_1/repeat
+    mcukf_MSE_1 = mcukf_MSE_1/repeat
+    ukf_MSE = ukf_MSE_1.sum(axis=1)/N
+    mcukf_MSE = mcukf_MSE_1.sum(axis=1)/N
 
     # Plot
+    print(f"ukf_MSE =\n{ukf_MSE}\nmcukf_MSE =\n{mcukf_MSE}")
     for i in range(states_dimension):
         plt.figure(1)
         plt.subplot(100*states_dimension+11+i)
@@ -55,8 +61,8 @@ if __name__ == "__main__":
         plt.legend(loc='upper left')
         plt.title("States")
     plt.figure(2)
-    plt.plot(time_line, mean_ukf_MSE.A.reshape(N,), linewidth=1, linestyle="-", label="ukf MSE")
-    plt.plot(time_line, mean_mcukf_MSE.A.reshape(N,), linewidth=1, linestyle="-", label="mcukf MSE")
+    plt.plot(time_line, ukf_MSE_1[0, :].A.reshape(N,), linewidth=1, linestyle="-", label="ukf MSE")
+    plt.plot(time_line, mcukf_MSE_1[0, :].A.reshape(N,), linewidth=1, linestyle="-", label="mcukf MSE")
     plt.grid(True)
     plt.legend(loc='upper left')
     plt.title("MSE")

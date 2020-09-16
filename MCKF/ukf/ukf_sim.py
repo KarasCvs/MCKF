@@ -2,7 +2,7 @@ import numpy as np
 from numpy.random import randn
 import matplotlib.pyplot as plt
 import functions.nonlinear_func as N_func
-from . import ukf as UKF
+from . import ukf3 as UKF
 
 
 class UKF_Sim():
@@ -25,14 +25,13 @@ class UKF_Sim():
         self.ukf_states = np.mat(np.zeros((states_dimension, self.N)))
         self.ukf_obs = np.mat(np.zeros((obs_dimension, self.N)))
         self.P = np.mat(np.identity(states_dimension))
-        self.sensor_MSE = np.mat(np.zeros((obs_dimension, self.N)))
-        self.ukf_MSE = np.mat(np.zeros((obs_dimension, self.N)))
+        self.ukf_MSE = np.mat(np.zeros((states_dimension, self.N)))
 
     def noise_init(self, q, r):
         self.noise_q = q             # 系统噪音
         self.noise_r = r
         self.state_noise = np.mat(self.noise_q * randn(self.states_dimension, self.N))
-        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + 0*randn(self.obs_dimension, self.N))
+        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + 600*randn(self.obs_dimension, self.N))
 
     # --------------------------------UKF init---------------------------------- #
     def ukf_init(self, alpha_, beta_, ki_):
@@ -53,24 +52,17 @@ class UKF_Sim():
         self.real_obs = obs
 
     def run(self):
-        self.sys_only = False
         # --------------------------------main procedure---------------------------------- #
         for i in range(1, self.N):
-            # self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
-            # self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
             self.ukf_states[:, i], self.P = self.ukf.estimate(self.ukf_states[:, i-1], self.sensor[:, i], self.P, i)
-            self.ukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.ukf_states[0, i]))
-        return self.time_line, self.ukf_states, self.ukf_MSE
+        return self.time_line, self.ukf_states
 
-    def system_only(self):
-        self.sys_only = True
+    def MSE(self):
         for i in range(1, self.N):
-            # 步进
-            self.states[:, i] = N_func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
-            self.real_obs[:, i] = N_func.observation_func(self.states[:, i])
-            self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
-        return self.time_line, self.states, self.real_obs, self.sensor
+            self.ukf_MSE[:, i] = self.states[:, i] - self.ukf_states[:, i]
+            self.ukf_MSE[:, i] = np.power(self.ukf_MSE[:, i], 2)
+        return self.ukf_MSE
 
     def plot(self):
         if self.sys_only:

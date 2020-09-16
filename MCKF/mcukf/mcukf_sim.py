@@ -25,14 +25,13 @@ class MCUKF_Sim():
         self.mcukf_states = np.mat(np.zeros((states_dimension, self.N)))
         self.ukf_obs = np.mat(np.zeros((obs_dimension, self.N)))
         self.P = np.mat(np.identity(states_dimension))
-        self.sensor_MSE = np.mat(np.zeros((obs_dimension, self.N)))
-        self.mcukf_MSE = np.mat(np.zeros((obs_dimension, self.N)))
+        self.mcukf_MSE = np.mat(np.zeros((states_dimension, self.N)))
 
     def noise_init(self, q, r):
         self.noise_q = q             # 系统噪音
         self.noise_r = r
         self.state_noise = np.mat(self.noise_q * randn(self.states_dimension, self.N))
-        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + 0*randn(self.obs_dimension, self.N))
+        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + 150*randn(self.obs_dimension, self.N))
 
     # --------------------------------UKF init---------------------------------- #
     def mcukf_init(self, sigma_, eps_, alpha_, beta_, ki_):
@@ -58,8 +57,13 @@ class MCUKF_Sim():
         for i in range(1, self.N):
             self.sensor[:, i] = self.real_obs[:, i] + self.observation_noise[:, i]
             self.mcukf_states[:, i], self.P = self.mcukf.estimate(self.mcukf_states[:, i-1], self.sensor[:, i], self.P, i)
-            self.mcukf_MSE[:, i] = abs(np.mean(self.states[0, i] - self.mcukf_states[0, i]))
-        return self.time_line, self.mcukf_states, self.mcukf_MSE
+        return self.time_line, self.mcukf_states
+
+    def MSE(self):
+        for i in range(1, self.N):
+            self.mcukf_MSE[:, i] = self.states[:, i] - self.mcukf_states[:, i]
+            self.mcukf_MSE[:, i] = np.power(self.mcukf_MSE[:, i], 2)
+        return self.mcukf_MSE
 
     def plot(self):
         for i in range(self.states_dimension):
