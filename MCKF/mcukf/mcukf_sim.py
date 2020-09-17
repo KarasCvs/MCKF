@@ -2,14 +2,14 @@ import numpy as np
 from numpy.random import randn
 import matplotlib.pyplot as plt
 import functions.nonlinear_func as N_func
-from . import mcukf3 as MCUKF
+from . import mcukf as MCUKF
 
 
 class MCUKF_Sim():
     # --------------------------------init---------------------------------- #
-    def __init__(self, states_dimension, obs_dimension, t, Ts, alpha_, beta_, ki_, sigma_, eps_, q_, r_):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, alpha_, beta_, ki_, sigma_, eps_, q_, r_, additional_noise=0):
         self.sys_init(states_dimension, obs_dimension, t, Ts)
-        self.noise_init(q_, r_)
+        self.noise_init(q_, r_, additional_noise)
         self.mcukf_init(sigma_, eps_, alpha_, beta_, ki_)
 
     def sys_init(self, states_dimension, obs_dimension, t, Ts):
@@ -27,11 +27,11 @@ class MCUKF_Sim():
         self.P = np.mat(np.identity(states_dimension))
         self.mcukf_MSE = np.mat(np.zeros((states_dimension, self.N)))
 
-    def noise_init(self, q, r):
+    def noise_init(self, q, r, additional_noise):
         self.noise_q = q             # 系统噪音
         self.noise_r = r
         self.state_noise = np.mat(self.noise_q * randn(self.states_dimension, self.N))
-        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + 150*randn(self.obs_dimension, self.N))
+        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + additional_noise)
 
     # --------------------------------UKF init---------------------------------- #
     def mcukf_init(self, sigma_, eps_, alpha_, beta_, ki_):
@@ -41,7 +41,8 @@ class MCUKF_Sim():
         self.mcukf.ut_init(alpha_, beta_, ki_)
         self.mcukf.state_func(N_func.state_func, N_func.observation_func, self.Ts)
 
-    def states_init(self, X0, ukf0, P0):
+    def states_init(self, init_parameters):
+        X0, ukf0, P0 = init_parameters
         self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)
         self.mcukf_states[:, 0] = np.array(ukf0).reshape(self.states_dimension, 1)
         self.real_obs[:, 0] = N_func.observation_func(self.states[:, 0])

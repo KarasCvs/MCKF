@@ -70,6 +70,7 @@ class MCUKF():
         x_posterior = x_new_mc
         P_posterior = (np.eye(self.states_dimension)-K*H_mc)*P_xx*(np.eye(self.states_dimension)-K*H_mc).T \
             + K*self.noise_R*K.T
+        return x_posterior, P_posterior
 
     def sigma_points(self, x_prior, P):
         sigma_A_ = cholesky((self.c_) * P)

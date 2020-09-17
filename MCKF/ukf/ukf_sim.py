@@ -7,9 +7,9 @@ from . import ukf as UKF
 
 class UKF_Sim():
     # --------------------------------init---------------------------------- #
-    def __init__(self, states_dimension, obs_dimension, t, Ts, alpha_, beta_, ki_, q_, r_):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, alpha_, beta_, ki_, q_, r_, additional_noise=0):
         self.sys_init(states_dimension, obs_dimension, t, Ts)
-        self.noise_init(q_, r_)
+        self.noise_init(q_, r_, additional_noise)
         self.ukf_init(alpha_, beta_, ki_)
 
     def sys_init(self, states_dimension, obs_dimension, t, Ts):
@@ -27,11 +27,11 @@ class UKF_Sim():
         self.P = np.mat(np.identity(states_dimension))
         self.ukf_MSE = np.mat(np.zeros((states_dimension, self.N)))
 
-    def noise_init(self, q, r):
+    def noise_init(self, q, r, additional_noise):
         self.noise_q = q             # 系统噪音
         self.noise_r = r
         self.state_noise = np.mat(self.noise_q * randn(self.states_dimension, self.N))
-        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + 600*randn(self.obs_dimension, self.N))
+        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) + additional_noise)
 
     # --------------------------------UKF init---------------------------------- #
     def ukf_init(self, alpha_, beta_, ki_):
@@ -40,7 +40,8 @@ class UKF_Sim():
         self.ukf.filter_init(self.states_dimension, self.obs_dimension, self.noise_q, self.noise_r)
         self.ukf.ut_init(alpha_, beta_, ki_)
 
-    def states_init(self, X0, ukf0, P0):
+    def states_init(self, init_parameters):
+        X0, ukf0, P0 = init_parameters
         self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)
         self.ukf_states[:, 0] = np.array(ukf0).reshape(self.states_dimension, 1)
         self.real_obs[:, 0] = N_func.observation_func(self.states[:, 0])

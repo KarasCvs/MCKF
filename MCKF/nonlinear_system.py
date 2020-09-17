@@ -5,9 +5,9 @@ import functions.nonlinear_func as N_func
 
 class NonlinearSys():
     # --------------------------------init---------------------------------- #
-    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, additional_noise=0):
         self.sys_init(states_dimension, obs_dimension, t, Ts)
-        self.noise_init(q_, r_)
+        self.noise_init(q_, r_, additional_noise)
 
     def sys_init(self, states_dimension, obs_dimension, t, Ts):
         self.states_dimension = states_dimension
@@ -25,12 +25,12 @@ class NonlinearSys():
         self.sensor_MSE = np.mat(np.zeros((obs_dimension, self.N)))
         self.mcukf_MSE = np.mat(np.zeros((obs_dimension, self.N)))
 
-    def noise_init(self, q, r):
+    def noise_init(self, q, r, additional_noise):
         self.noise_q = q             # 系统噪音
         self.noise_r = r
         self.state_noise = np.mat(self.noise_q * randn(self.states_dimension, self.N))
         self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) +
-                                        0*randn(self.obs_dimension, self.N))
+                                        additional_noise)
 
     def states_init(self, X0, ukf0, P0):
         self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)

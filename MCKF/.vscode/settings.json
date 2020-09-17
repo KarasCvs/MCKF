@@ -1,4 +1,4 @@
 {
     "python.pythonPath": "/usr/bin/python3",
-    "terminal.integrated.cwd": "~/workspace/MCKF/MCKF"
+    "terminal.integrated.cwd": ""
 }
