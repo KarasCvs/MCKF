@@ -19,24 +19,16 @@ class NonlinearSys():
         self.states = np.mat(np.zeros((states_dimension, self.N)))
         self.sensor = np.mat(np.zeros((obs_dimension, self.N)))
         self.real_obs = np.mat(np.zeros((obs_dimension, self.N)))
-        self.mcukf_states = np.mat(np.zeros((states_dimension, self.N)))
-        self.ukf_obs = np.mat(np.zeros((obs_dimension, self.N)))
-        self.P = np.mat(np.identity(states_dimension))
-        self.sensor_MSE = np.mat(np.zeros((obs_dimension, self.N)))
-        self.mcukf_MSE = np.mat(np.zeros((obs_dimension, self.N)))
 
     def noise_init(self, q, r, additional_noise):
-        self.noise_q = q             # 系统噪音
-        self.noise_r = r
-        self.state_noise = np.mat(self.noise_q * randn(self.states_dimension, self.N))
-        self.observation_noise = np.mat(self.noise_r*randn(self.obs_dimension, self.N) +
-                                        additional_noise)
+        self.state_noise = np.mat(q * randn(self.states_dimension, self.N))
+        self.observation_noise = np.mat(r*randn(self.obs_dimension, self.N) +
+                                        additional_noise*randn(self.obs_dimension, self.N))
 
-    def states_init(self, X0, ukf0, P0):
+    def states_init(self, X0):
         self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)
         self.real_obs[:, 0] = N_func.observation_func(self.states[:, 0])
         self.sensor[:, 0] = self.real_obs[:, 0] + self.observation_noise[:, 0]
-        self.P = np.diag(P0)
 
     def run(self):
         for i in range(1, self.N):

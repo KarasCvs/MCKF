@@ -27,6 +27,8 @@ class Manager():
         with open(target, 'r') as f:
             json_data = f.read()
             data = json.loads(json_data)
+        self.data = data
+        self.parameters = data['parameters']
         self.states_dimension = data['shapes']['states dimension']
         self.obs_dimension = data['shapes']['obs dimension']
         self.N = int(data['parameters']['time']/data['parameters']['ts'])
@@ -72,8 +74,19 @@ class Manager():
             plt.title(f"MSE of state{i}")
 
     def plot_mse(self):
+        print(f'Sigma = {self.parameters["sigma"]}')
         for i in self.mse:
             print(f'{i}=\n{self.mse[i]}\n')
 
     def show(self):
         plt.show()
+
+    def find(self, key):
+        for i in self.data:
+            if type(self.data[i]) is dict:
+                for j in self.data[i]:
+                    if j == key:
+                        return self.data[i][j]
+            else:
+                if i == key:
+                    return self.data[i]

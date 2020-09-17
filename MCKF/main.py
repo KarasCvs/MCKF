@@ -1,7 +1,7 @@
 from data_manager import Manager
 
 
-manager = Manager()
-manager.read_data()
-manager.plot_all()
-manager.show()
+mg = Manager()
+mg.read_data()
+mg.plot_all()
+mg.show()
