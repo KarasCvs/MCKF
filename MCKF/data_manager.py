@@ -8,7 +8,7 @@ import numpy as np
 class Manager():
     def __init__(self):
         self.path = './data/'
-        self.time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        self.time = time.strftime('%Y-%m-%d %H.%M.%S', time.localtime())
         self.file = os.path.join(self.path, self.time+'.json')
         self.temp_file = os.path.join(self.path, 'LastSimulation.json')
 
