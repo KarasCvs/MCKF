@@ -49,7 +49,7 @@ class Mcukf(Filter):
         x_posterior = x_new_mc
         P_posterior = (np.eye(self.states_dimension)-K*H_mc)*P_xx*(np.eye(self.states_dimension)-K*H_mc).T \
             + K*self.noise_R*K.T
-        return x_posterior, P_posterior
+        return x_posterior, P_posterior, count
 
     def mc(self, E):
         entropy_x = np.zeros(self.states_dimension)

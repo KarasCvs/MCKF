@@ -34,10 +34,10 @@ class Manager():
         self.mse1 = data['mse1']
         self.mse = data['mse']
 
-    def read_data(self, target=None):
-        if target is None:
-            target = self.temp_file
-        with open(target, 'r') as f:
+    def read_data(self, filename=None):
+        if filename is None:
+            filename = 'LastSimulation.json'
+        with open(os.path.join(self.path, filename), 'r') as f:
             json_data = f.read()
             data = json.loads(json_data)
         self.view_data(data)
@@ -85,13 +85,31 @@ class Manager():
     def show(self):
         plt.show()
 
-    def find(self, key):
+    def find(self, key, filename=None):
         key = key.lower()
+        self.read_data(filename)
         for i in self.data:
-            if type(self.data[i]) is dict:
-                for j in self.data[i]:
-                    if j == key:
-                        return self.data[i][j]
-            else:
-                if i == key:
-                    return self.data[i]
+            try:
+                if type(self.data[i]) is dict:
+                    for j in self.data[i]:
+                        if j == key:
+                            return self.data[i][j]
+                else:
+                    if i == key:
+                        return self.data[i]
+            except KeyError:
+                print("Can't find key.\n")
+
+    def locate(self, keywords):
+        filenames = os.listdir(self.path)
+        fitted_list = []
+        for filename in filenames:
+            for key in keywords:
+                value = self.find(key, filename)
+                if value is not keywords[key]:
+                    break
+                fitted_list.append(filename)
+        if fitted_list:
+            return fitted_list
+        else:
+            print("Can't find keys.\n")

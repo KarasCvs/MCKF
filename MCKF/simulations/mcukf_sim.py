@@ -19,6 +19,8 @@ class McukfSim(FilterSim):
 
     def run(self):
         # --------------------------------main procedure---------------------------------- #
+        mc_count = 0
         for i in range(1, self.N):
-            self.states[:, i], self.P = self.mcukf.estimate(self.states[:, i-1], self.sensor[:, i], self.P, i)
-        return self.time_line, self.states
+            self.states[:, i], self.P, count = self.mcukf.estimate(self.states[:, i-1], self.sensor[:, i], self.P, i)
+            mc_count += count
+        return self.time_line, self.states, mc_count
