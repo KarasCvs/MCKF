@@ -15,18 +15,14 @@ class Manager():
     def save_data(self, data):
         if not os.path.exists(self.path):
             os.makedirs(self.path)
+        data['timestamp'] = self.time
         data = json.dumps(data)
         with open(self.file, 'w') as f:
             f.write(data)
         with open(self.temp_file, 'w') as f:
             f.write(data)
 
-    def read_data(self, target=None):
-        if target is None:
-            target = self.temp_file
-        with open(target, 'r') as f:
-            json_data = f.read()
-            data = json.loads(json_data)
+    def view_data(self, data):
         self.data = data
         self.parameters = data['parameters']
         self.states_dimension = data['shapes']['states dimension']
@@ -37,6 +33,14 @@ class Manager():
         self.observations = data['observations']
         self.mse1 = data['mse1']
         self.mse = data['mse']
+
+    def read_data(self, target=None):
+        if target is None:
+            target = self.temp_file
+        with open(target, 'r') as f:
+            json_data = f.read()
+            data = json.loads(json_data)
+        self.view_data(data)
         return data
 
     def plot_all(self):
@@ -82,6 +86,7 @@ class Manager():
         plt.show()
 
     def find(self, key):
+        key = key.lower()
         for i in self.data:
             if type(self.data[i]) is dict:
                 for j in self.data[i]:

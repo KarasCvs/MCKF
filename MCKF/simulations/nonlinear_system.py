@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.random import randn
-import functions.nonlinear_func as N_func
+from functions import nonlinear_func as N_func
 
 
 class NonlinearSys():

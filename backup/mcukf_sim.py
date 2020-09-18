@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.random import randn
-import functions.nonlinear_func as N_func
-from . import mcukf as MCUKF
+from functions import nonlinear_func as N_func
+from filters.mcukf.mcukf import MCUKF
 
 
 class MCUKF_Sim():

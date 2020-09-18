@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.random import randn
-import functions.nonlinear_func as N_func
-from . import ukf as UKF
+from functions import nonlinear_func as N_func
+from filters.ukf.ukf import UKF
 
 
 class UKF_Sim():
