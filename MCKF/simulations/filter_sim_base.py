@@ -5,10 +5,6 @@ from numpy.random import randn
 class FilterSim():
     # --------------------------------init---------------------------------- #
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
-        self.sys_init(states_dimension, obs_dimension, t, Ts)
-        self.noise_init(q_, r_)
-
-    def sys_init(self, states_dimension, obs_dimension, t, Ts):
         self.states_dimension = states_dimension
         self.obs_dimension = obs_dimension
         self.t = t
@@ -17,27 +13,30 @@ class FilterSim():
         self.time_line = np.linspace(0, self.t, self.N)
         self.states = np.mat(np.zeros((states_dimension, self.N)))
         self.P = np.mat(np.identity(states_dimension))
-        self.mse = np.mat(np.zeros((states_dimension, self.N)))
+        self.mse1 = np.mat(np.zeros((states_dimension, self.N)))
+        self.noise_q = q_
+        self.noise_r = r_
 
-    def noise_init(self, q, r):
-        self.noise_q = q             # 系统噪音
-        self.noise_r = r
+    def noise_init(self, add_r=0, repeat=1):
         self.state_noise = np.mat(self.noise_q * randn(self.states_dimension, self.N))
+        self.obs_noise = [np.mat(self.noise_r*randn(self.obs_dimension, self.N)
+                                 + add_r*randn(self.obs_dimension, self.N)) for _ in range(repeat)]
+        return self.obs_noise
 
     def states_init(self, init_parameters):
         ukf0, P0 = init_parameters
         self.states[:, 0] = np.array(ukf0).reshape(self.states_dimension, 1)
         self.P = np.diag(P0)
 
-    def read_data(self, states, sensor):
+    def read_data(self, states, obs):
         self.real_states = states
-        self.sensor = sensor
+        self.obs = obs
 
     def MSE(self):
         for i in range(1, self.N):
-            self.mse[:, i] = self.real_states[:, i] - self.states[:, i]
-            self.mse[:, i] = np.power(self.mse[:, i], 2)
-        return self.mse
+            self.mse1[:, i] = self.real_states[:, i] - self.states[:, i]
+            self.mse1[:, i] = np.power(self.mse1[:, i], 2)
+        return self.mse1
 
 
 if __name__ == "__main__":

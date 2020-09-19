@@ -19,4 +19,4 @@ class Ukf(Filter):
         K = P_xz * np.linalg.inv(P_zz)
         x_posterior = x_mean + K*(sensor_data - obs_mean)
         P_posterior = P_xx - K*P_zz*K.T
-        return(x_posterior, P_posterior)
+        return x_posterior, P_posterior

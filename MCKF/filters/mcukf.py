@@ -1,6 +1,6 @@
 # This is a mcukf based on the paper oldest references.
 # Like the original one and Katayama's book
-# Tis mathod use a self-definition lambda, I set it equal to states dimension
+# Tis method use a self-definition lambda, I set it equal to states dimension
 import numpy as np
 from numpy.linalg import cholesky
 from filters.filter_base import Filter

@@ -8,19 +8,34 @@ import numpy as np
 class Manager():
     def __init__(self):
         self.path = './data/'
-        self.time = time.strftime('%Y-%m-%d %H.%M.%S', time.localtime())
-        self.file = os.path.join(self.path, self.time+'.json')
         self.temp_file = os.path.join(self.path, 'LastSimulation.json')
 
+    def noise_write(self, obs_dimension, length, r, additional_noise):
+        noise = np.mat(r * np.random.randn(obs_dimension, length) + additional_noise * np.random.randn(obs_dimension, length))
+        noise = {'obs_noise': noise.tolist()}
+        noise_data = json.dumps(noise)
+        with open('./data/noise.json', 'w') as f:
+            f.write(noise_data)
+
+    def noise_read(self):
+        with open('./data/noise.json', 'r') as f:
+            noise_json = f.read()
+            noise = json.loads(noise_json)
+        return np.mat(noise['obs_noise'])
+
     def save_data(self, data):
+        time_ = time.strftime('%Y-%m-%d %H.%M.%S', time.localtime())
+        filename = os.path.join(self.path, time_+'.json')
+        self.view_data(data)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
-        data['timestamp'] = self.time
+        data['timestamp'] = time_
         data = json.dumps(data)
-        with open(self.file, 'w') as f:
+        with open(filename, 'w') as f:
             f.write(data)
         with open(self.temp_file, 'w') as f:
             f.write(data)
+        print(f"Data saved as '{filename}'")
 
     def view_data(self, data):
         self.data = data
@@ -90,6 +105,8 @@ class Manager():
         self.read_data(filename)
         for i in self.data:
             try:
+                if i == key:
+                    return self.data[i]
                 if type(self.data[i]) is dict:
                     for j in self.data[i]:
                         if j == key:
@@ -110,6 +127,8 @@ class Manager():
                     break
                 fitted_list.append(filename)
         if fitted_list:
+            fitted_list = list(set(fitted_list))
+            print(f"Find fitted files {fitted_list}")
             return fitted_list
         else:
             print("Can't find keys.\n")
