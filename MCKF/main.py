@@ -5,7 +5,7 @@ from data_manager import Manager
 # for sigma in sigmas:
 #     sim_run(sigma)
 mg = Manager()
-keywords = {"beta": 2}
+keywords = {"description": "Non-Gaussian."}
 targets = mg.locate(keywords)
 for i in targets:
     print(i)

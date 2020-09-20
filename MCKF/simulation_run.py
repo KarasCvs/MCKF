@@ -23,8 +23,8 @@ def sim_run(sigma_):
     kappa = 0
     # noise
     q = 0
-    r = 100
-    add_r = 0
+    r = 15.5
+    add_r = 95
     additional_noise = add_r*np.random.randn(obs_dimension, N)
 
     # System initial
@@ -46,7 +46,7 @@ def sim_run(sigma_):
     _, mcukf_states_mean, mcukf_MSE1, mcukf_MSE, mc_count = mcukf_sim.run(filter_init, obs_noise, repeat)
 
     # build a data set
-    description = "Gaussian noise, new method."
+    description = "Non-Gaussian."
     data_summarizes = {
                     'description': description,
                     'shapes': {'states dimension': states_dimension, 'obs dimension': states_dimension},

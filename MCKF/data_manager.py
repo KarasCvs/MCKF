@@ -121,13 +121,13 @@ class Manager():
         filenames = os.listdir(self.path)
         fitted_list = []
         for filename in filenames:
+            fit = True
             for key in keywords:
                 value = self.find(key, filename)
-                if value is not keywords[key]:
-                    break
+                fit &= (value == keywords[key])
+            if fit:
                 fitted_list.append(filename)
         if fitted_list:
-            fitted_list = list(set(fitted_list))
             print(f"Find fitted files {fitted_list}")
             return fitted_list
         else:
