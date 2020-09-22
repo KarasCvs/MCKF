@@ -1,4 +1,4 @@
-# There are atleast 3 ways to calculate W under ut_init,
+ # There are atleast 3 ways to calculate W under ut_init,
 # No.1: The original one and Katayama's book which will is most stable. Set lambda as a conste.
 # No.2: <The Scaled Unscented Transformation> used in robot_localization too,
 # but it's not stable enough, could cause the covariance matrix negative definite

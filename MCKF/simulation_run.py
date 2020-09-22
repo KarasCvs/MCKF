@@ -11,7 +11,7 @@ def sim_run(sigma_):
     states_dimension = 3
     obs_dimension = 1
     repeat = 100
-    t = 50 
+    t = 50
     Ts = 0.1
     N = int(t/Ts)
     # MCUKF part
@@ -38,7 +38,7 @@ def sim_run(sigma_):
     ukf_sim = UkfSim(states_dimension, obs_dimension, t, Ts, alpha, beta, kappa, q, r)
     # Mcukf initial, order: x dimension, y dimension, run time, time space, repeat, α, β, kappa, sigma, eps, q, r
     mcukf_sim = McukfSim(states_dimension, obs_dimension, t, Ts, alpha, beta, kappa, sigma, eps, q, r)
-
+    print("Simulation started.")
     ukf_sim.read_data(states, real_obs)
     mcukf_sim.read_data(states, real_obs)
     obs_noise = ukf_sim.noise_init(additional_noise, repeat)
@@ -46,7 +46,7 @@ def sim_run(sigma_):
     _, mcukf_states_mean, mcukf_MSE1, mcukf_MSE, mc_count = mcukf_sim.run(filter_init, obs_noise, repeat)
 
     # build a data set
-    description = "Non-Gaussian."
+    description = "Non-Gaussian2."
     data_summarizes = {
                     'description': description,
                     'shapes': {'states dimension': states_dimension, 'obs dimension': states_dimension},

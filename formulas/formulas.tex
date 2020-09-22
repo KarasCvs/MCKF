@@ -1,0 +1,143 @@
+\documentclass[dvipdfmx]{jsarticle}
+\setlength{\textheight}{\paperheight}       % ひとまず紙面を本文領域に
+\setlength{\topmargin}{-5.4truemm}          % 上の余白を20mm(=1inch-5.4mm)に
+\setlength{\parindent}{1em}                 % 缩进1字符
+\addtolength{\topmargin}{-\headheight}      %
+\addtolength{\topmargin}{-\headsep}         % ヘッダの分だけ本文領域を移動させる
+\addtolength{\textheight}{-40truemm}        % 下の余白も20mmに幅の設定
+\setlength{\textwidth}{\paperwidth}         % ひとまず紙面を本文領域に
+\setlength{\oddsidemargin}{-5.4truemm}      % 左の余白を20mm(=1inch-5.4mm)に
+\setlength{\evensidemargin}{-5.4truemm}     %
+\addtolength{\textwidth}{-40truemm}         % 右の余白も20mmに
+\usepackage{fancybox,ascmac}                % 文字を囲むため
+\usepackage[dvipdfmx]{graphicx}             % 図を挿入するため
+\usepackage{float}                          %设置图片浮动位置的宏包
+\usepackage{subfigure}                      %插入多图时用子图显示的宏包
+\usepackage{caption}                        % 图片标题
+\usepackage{amsfonts}                       % \mathbb{R}を使うため
+\usepackage{bm}                             % ベクトルの太字用
+\usepackage{amsmath}                        % \begin{align}を使うため $\mathcal{X}$导入花体字母
+\usepackage{indentfirst}                    % 首行缩进 \noindent不缩进 \indent主动缩进 \hangindent 2em \hangafter=0 整段缩进
+\begin{document}
+
+\title{MCKF Summarize}           % 文章名の指定
+\author{20nm419n   WANG SHUXUAN 王 書源}    % 著者名の指定
+\maketitle                                  % 文書・著者名・日付の出力
+\subsection*{The Common KF}
+Predict:
+\begin{equation}\nonumber\label{Func.}\begin{aligned}
+\begin{array}{l}
+  \hat{\mathbf{x}}_{k \mid k-1}=\mathbf{F}_{k} \hat{\mathbf{x}}_{k-1 \mid k-1}+\mathbf{B}_{k} \mathbf{u}_{k} \\
+  \mathbf{P}_{k \mid k-1}=\mathbf{F}_{k} \mathbf{P}_{k-1 \mid k-1} \mathbf{F}_{k}^{\top}+\mathbf{Q}_{k}
+  \end{array}
+\end{aligned}\end{equation}
+Update:
+\begin{equation}\nonumber\label{Func.}\begin{aligned}
+  \begin{array}{l}
+    \tilde{\mathbf{y}}_{k}=\mathbf{z}_{k}-\mathbf{H}_{k} \hat{\mathbf{x}}_{k \mid k-1} \\
+    \mathbf{S}_{k}=\mathbf{H}_{k} \mathbf{P}_{k \mid k-1} \mathbf{H}_{k}^{\top}+\mathbf{R}_{k} \\
+    \mathbf{K}_{k}=\mathbf{P}_{k \mid k-1} \mathbf{H}_{k}^{\top} \mathbf{S}_{k}^{-1} \\
+    \hat{\mathbf{x}}_{k \mid k}=\hat{\mathbf{x}}_{k \mid k-1}+\mathbf{K}_{k} \tilde{\mathbf{y}}_{k} \\
+    \mathbf{P}_{k \mid k}=\left(\mathbf{I}-\mathbf{K}_{k} \mathbf{H}_{k}\right) \mathbf{P}_{k \mid k-1} \\
+    \tilde{\mathbf{y}}_{k \mid k}=\mathbf{z}_{k}-\mathbf{H}_{k} \hat{\mathbf{x}}_{k \mid k}
+    \end{array}
+\end{aligned}\end{equation}
+\subsection*{The MCKF}
+\subsubsection*{By fixed point iteration}
+Predict is exactly same with KF.
+
+Update:
+\begin{equation}\nonumber\label{Func.}\begin{aligned}
+  \begin{aligned}
+    &\widehat{\mathbf{x}}(k \mid k)_{t}=\widehat{\mathbf{x}}(k \mid k-1)+\widetilde{\mathbf{K}}(k)(\mathbf{y}(k)-\mathbf{H}(k) \widehat{\mathbf{x}}(k \mid k-1))\\
+    &\text { with }\\
+    &\tilde{\mathbf{K}}(k)=\tilde{\mathbf{P}}(k \mid k-1) \mathbf{H}^{T}(k)\left(\mathbf{H}(k) \tilde{\mathbf{P}}(k \mid k-1) \mathbf{H}^{T}(k)+\widetilde{\mathbf{R}}(k)\right)^{-1}\\
+    &\widetilde{\mathbf{P}}(k \mid k-1)=\mathbf{B}_{p}(k \mid k-1) \tilde{\mathbf{C}}_{x}^{-1}(k) \mathbf{B}_{p}^{T}(k \mid k-1)\\
+    &\widetilde{\mathbf{R}}(k)=\mathbf{B}_{r}(k) \widetilde{\mathbf{C}}_{y}^{-1}(k) \mathbf{B}_{r}^{T}(k)\\
+    &\widetilde{\mathbf{C}}_{x}(k)=\operatorname{diag}\left(G_{\sigma}\left(\tilde{e}_{1}(k)\right), \ldots, G_{\sigma}\left(\widetilde{e}_{n}(k)\right)\right)\\
+    &\widetilde{\mathbf{C}}_{y}(k)=\operatorname{diag}\left(G_{\sigma}\left(\widetilde{e}_{n+1}(k)\right), \ldots, G_{\sigma}\left(\widetilde{e}_{n+m}(k)\right)\right)\\
+    &\widetilde{e}_{i}(k)=d_{i}(k)-\mathbf{w}_{i}(k) \widehat{\mathbf{x}}(k \mid k)_{t-1}
+    \end{aligned}
+\end{aligned}\end{equation}
+\subsubsection*{By differential}
+Predict is exactly same with KF.
+
+Update:
+\begin{equation}\nonumber\label{Func.}\begin{aligned}
+  \begin{array}{c}
+    L_{k}=\frac{G_{\sigma}\left(\left\|y_{k}-H \hat{x}_{k}^{-}\right\|_{R_{k}^{-1}}\right)}{G_{\sigma}\left(\left\|\hat{x}_{k}^{-}-F \hat{x}_{k-1}\right\|_{P_{k \mid k-1}^{-1}}\right)} \\
+    K_{k}=\left(P_{k \mid k-1}^{-1}+L_{k} H^{T} R_{k}^{-1} H\right)^{-1} L_{k} H^{T} R_{k}^{-1} \\
+    \hat{x}_{k}=\hat{x}_{k}^{-}+K_{k}\left(y_{k}-H \hat{x}_{k}^{-}\right) \\
+    P_{k \mid k}=\left(I-K_{k} H\right) P_{k \mid k-1}\left(I-K_{k} H\right)^{T}+K_{k} R_{k} K_{k}^{T}
+    \end{array}
+\end{aligned}\end{equation}
+\subsection*{The UKF}
+Predict:
+\begin{equation}\nonumber\label{Func.}\begin{aligned}
+  \begin{aligned}
+    &\begin{array}{l}
+    \mathcal{X}_{t-1}=\left(\mu_{t-1} \quad \mu_{t-1}+\gamma \sqrt{\Sigma_{t-1}} \quad \mu_{t-1}-\gamma \sqrt{\Sigma_{t-1}}\right) \\
+    \overline{\mathcal{X}}_{t}^{*}=g\left(u_{t}, \mathcal{X}_{t-1}\right) \\
+    \bar{\mu}_{t}=\sum_{i=0}^{2 n} w_{m}^{[i]} \overline{\mathcal{X}}_{t}^{*[i]}
+    \end{array}\\
+    &\begin{array}{l}
+    \bar{\Sigma}_{t}=\sum_{i=0}^{2 n} w_{c}^{[i]}\left(\bar{X}_{t}^{*}[i]-\bar{\mu}_{t}\right)\left(\overline{\mathcal{X}}_{t}^{*}[i]-\bar{\mu}_{t}\right)^{T}+Q_{t} \\
+    \bar{X}_{t}=\left(\bar{\mu}_{t} \quad \bar{\mu}_{t}+\gamma \sqrt{\bar{\Sigma}_{t}} \quad \bar{\mu}_{t}-\gamma \sqrt{\bar{\Sigma}_{t}}\right)
+    \end{array}\\
+    &\begin{array}{l}
+    \overline{\mathcal{Z}}_{t}=h\left(\overline{\mathcal{X}}_{t}\right) \\
+    \hat{z}_{t}=\sum_{i=0}^{2 n} w_{m}^{[i]} \overline{\mathcal{Z}}_{t}^{[i]}
+    \end{array}\\
+    &S_{t}=\sum_{i=0}^{2 n} w_{c}^{[i]}\left(\bar{z}_{t}^{[i]}-\hat{z}_{t}\right)\left(\overline{\mathcal{Z}}_{t}^{[i]}-\hat{z}_{t}\right)^{T}+R_{t} \quad
+    \end{aligned}
+\end{aligned}\end{equation}
+$\bar{\Sigma}_{t}$ can also showed as $P^-1(k|k-1)$ or $P_xx$, $S_{t}$ can also showed as $P_{zz}$.
+
+
+Update:
+\begin{equation}\nonumber\label{Func.}\begin{aligned}
+  \begin{array}{l}
+    \bar{\Sigma}_{t}^{x, z}=\sum_{i=0}^{2 n} w_{c}^{[i]}\left(\overline{\mathcal{X}}_{t}^{[i]}-\bar{\mu}_{t}\right)\left(\overline{\mathcal{Z}}_{t}^{[i]}-\hat{z}_{t}\right)^{T} \\
+    K_{t}=\bar{\Sigma}_{t}^{x, z} S_{t}^{-1} \\
+    \mu_{t}=\bar{\mu}_{t}+K_{t}\left(z_{t}-\hat{z}_{t}\right) \\
+    \Sigma_{t}=\bar{\Sigma}_{t}-K_{t} S_{t} K_{t}^{T}
+    \end{array}
+\end{aligned}\end{equation}
+$\bar{\Sigma}_{t}^{x, z}$ can also showed as $P_{xz}$
+\subsection*{The MCUKF}
+\subsubsection*{By fixed point iteration}
+Predict is exactly same with UKF.
+
+Update:
+\begin{equation}\nonumber\label{Func.}\begin{aligned}
+  \begin{aligned}
+    \widehat{\mathbf{x}}(k \mid k)_{t}&= \widehat{\mathbf{x}}(k \mid k-1)+\widetilde{\mathbf{K}}(k)(\mathbf{y}(k)-\widehat{\mathbf{y}}(k)) \\
+    \widetilde{\mathbf{K}}(k)&= \widetilde{\mathbf{P}}(k \mid k-1) \mathbf{H}^{T}(k) \\
+    & \times\left(\mathbf{H}(k) \widetilde{\mathbf{P}}(k \mid k-1) \mathbf{H}^{T}(k)+\widetilde{\mathbf{R}}(k)\right)^{-1} \\
+    \widetilde{\mathbf{P}}(k \mid k-1)&= \mathbf{S}_{p}(k \mid k-1) \widetilde{\mathbf{C}}_{x}^{-1}(k) \mathbf{S}_{p}^{T}(k \mid k-1) \\
+    \widetilde{\mathbf{R}}(k)&= \mathbf{S}_{r}(k) \widetilde{\mathbf{C}}_{y}^{-1}(k) \mathbf{S}_{r}^{T}(k) \\
+    \widetilde{\mathbf{C}}_{x}(k)&= \operatorname{diag}\left(\mathrm{G}_{\sigma}\left(\widetilde{e}_{1}(k)\right), \ldots, \mathrm{G}_{\sigma}\left(\widetilde{e}_{n}(k)\right)\right) \\
+    \widetilde{\mathbf{C}}_{y}(k)&= \operatorname{diag}\left(\mathrm{G}_{\sigma}\left(\widetilde{e}_{n+1}(k)\right), \ldots, \mathrm{G}_{\sigma}\left(\widetilde{e}_{n+m}(k)\right)\right.\\
+    \widetilde{e}_{i}(k) &=d_{i}(k)-\mathbf{w}_{i}(k) \widehat{\mathbf{x}}(k \mid k)_{t-1}
+    \end{aligned}
+\end{aligned}\end{equation}
+where:
+\begin{equation}\nonumber\label{Func.}\begin{aligned}
+  \begin{aligned}
+    \mathbf{D}(k) &=\mathbf{S}^{-1}(k)\left[\begin{array}{c}
+    \widehat{\mathbf{x}}(k \mid k-1) \\
+    \mathbf{y}(k)-\widehat{\mathbf{y}}(k)+\mathbf{H}(k) \widehat{\mathbf{x}}(k \mid k-1)
+    \end{array}\right] \\
+    \mathbf{W}(k) &=\mathbf{S}^{-1}(k)\left[\begin{array}{c}
+    \mathbf{I} \\
+    \mathbf{H}(k)
+    \end{array}\right] \\
+    \mathbf{e}(k) &=\mathbf{S}^{-1}(k) \xi(k) \\
+    \mathbf{H}(k)=\left(\mathbf{P}^{-1}(k \mid k-1) \mathbf{P}_{\mathbf{x y}}(k)\right)^{T}
+    \end{aligned}
+\end{aligned}\end{equation}
+\subsubsection*{By differential}
+Predict is exactly same with UKF.
+
+Update:?
+\end{document}

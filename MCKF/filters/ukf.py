@@ -11,7 +11,7 @@ class Ukf(Filter):
         self.k = k
         X_sigmas = self.sigma_points(x_prior, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas, self.states_dimension, self.noise_Q)
-        # obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.noise_R, self.obs_dimension)
+        obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.noise_R, self.obs_dimension)
         Z_sigmas = self.sigma_points(x_mean, P_xx)
         obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, Z_sigmas, self.obs_dimension, self.noise_R)
         # posterior

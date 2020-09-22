@@ -33,6 +33,7 @@ class Mcukf(Filter):
         W_mc = S_mc_inv*np.vstack((np.identity(self.states_dimension), H_mc))
         D_mc = S_mc_inv*np.vstack((x_mean, sensor_data - obs_mean + H_mc*x_mean))
         x_init_mc = np.linalg.inv(W_mc.T*W_mc)*W_mc.T*D_mc
+        # x_init_mc = x_mean
         Evaluation = 1
         count = 0
         x_old_mc = x_init_mc
