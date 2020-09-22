@@ -49,7 +49,7 @@ Predict is exactly same with KF.
 Update:
 \begin{equation}\nonumber\label{Func.}\begin{aligned}
   \begin{aligned}
-    &\widehat{\mathbf{x}}(k \mid k)_{t}=\widehat{\mathbf{x}}(k \mid k-1)+\widetilde{\mathbf{K}}(k)(\mathbf{y}(k)-\mathbf{H}(k) \widehat{\mathbf{x}}(k \mid k-1))\\
+    &c=\widehat{\mathbf{x}}(k \mid k-1)+\widetilde{\mathbf{K}}(k)(\mathbf{y}(k)-\mathbf{H}(k) \widehat{\mathbf{x}}(k \mid k-1))\\
     &\text { with }\\
     &\tilde{\mathbf{K}}(k)=\tilde{\mathbf{P}}(k \mid k-1) \mathbf{H}^{T}(k)\left(\mathbf{H}(k) \tilde{\mathbf{P}}(k \mid k-1) \mathbf{H}^{T}(k)+\widetilde{\mathbf{R}}(k)\right)^{-1}\\
     &\widetilde{\mathbf{P}}(k \mid k-1)=\mathbf{B}_{p}(k \mid k-1) \tilde{\mathbf{C}}_{x}^{-1}(k) \mathbf{B}_{p}^{T}(k \mid k-1)\\
@@ -110,7 +110,6 @@ Predict is exactly same with UKF.
 
 Update:
 \begin{equation}\nonumber\label{Func.}\begin{aligned}
-  \begin{aligned}
     \widehat{\mathbf{x}}(k \mid k)_{t}&= \widehat{\mathbf{x}}(k \mid k-1)+\widetilde{\mathbf{K}}(k)(\mathbf{y}(k)-\widehat{\mathbf{y}}(k)) \\
     \widetilde{\mathbf{K}}(k)&= \widetilde{\mathbf{P}}(k \mid k-1) \mathbf{H}^{T}(k) \\
     & \times\left(\mathbf{H}(k) \widetilde{\mathbf{P}}(k \mid k-1) \mathbf{H}^{T}(k)+\widetilde{\mathbf{R}}(k)\right)^{-1} \\
@@ -119,11 +118,9 @@ Update:
     \widetilde{\mathbf{C}}_{x}(k)&= \operatorname{diag}\left(\mathrm{G}_{\sigma}\left(\widetilde{e}_{1}(k)\right), \ldots, \mathrm{G}_{\sigma}\left(\widetilde{e}_{n}(k)\right)\right) \\
     \widetilde{\mathbf{C}}_{y}(k)&= \operatorname{diag}\left(\mathrm{G}_{\sigma}\left(\widetilde{e}_{n+1}(k)\right), \ldots, \mathrm{G}_{\sigma}\left(\widetilde{e}_{n+m}(k)\right)\right.\\
     \widetilde{e}_{i}(k) &=d_{i}(k)-\mathbf{w}_{i}(k) \widehat{\mathbf{x}}(k \mid k)_{t-1}
-    \end{aligned}
 \end{aligned}\end{equation}
 where:
 \begin{equation}\nonumber\label{Func.}\begin{aligned}
-  \begin{aligned}
     \mathbf{D}(k) &=\mathbf{S}^{-1}(k)\left[\begin{array}{c}
     \widehat{\mathbf{x}}(k \mid k-1) \\
     \mathbf{y}(k)-\widehat{\mathbf{y}}(k)+\mathbf{H}(k) \widehat{\mathbf{x}}(k \mid k-1)
@@ -134,10 +131,20 @@ where:
     \end{array}\right] \\
     \mathbf{e}(k) &=\mathbf{S}^{-1}(k) \xi(k) \\
     \mathbf{H}(k)=\left(\mathbf{P}^{-1}(k \mid k-1) \mathbf{P}_{\mathbf{x y}}(k)\right)^{T}
-    \end{aligned}
 \end{aligned}\end{equation}
 \subsubsection*{By differential}
 Predict is exactly same with UKF.
 
-Update:?
+Update:
+\begin{equation}\label{Func.}\begin{aligned}
+  \mathbf{K}(k) &= (P_{xx}(k)+(P_{zz}(k)-R(k))L^{T})^{-1}\widetilde{H}R^{-1} \\
+  x_{k|k} &= \bar{x}+K(k)(y-\bar{y}) \\
+  P_{k|k} &= (I-K\widetilde{H})P_{xx}(I-K\widetilde{H})^T + KRK^T
+\end{aligned}\end{equation}
+with:
+\begin{equation}\label{Func.}\begin{aligned}
+  L &= \frac{G(\left\lVert y-\widetilde{H}\bar{x}\right\rVert_{R_{k}^{-1}})}{G(\left\lVert \bar{x}-f(x_{k-1})\right\rVert_{p_{xx}^{-1}})} \\
+  \widetilde{H} &= P_{xx}^{-1}P_{xz}
+\end{aligned}\end{equation}
+
 \end{document}
