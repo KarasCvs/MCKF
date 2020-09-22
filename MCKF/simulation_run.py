@@ -1,16 +1,14 @@
 from simulations.ukf_sim import UkfSim
 from simulations.mcukf_sim import McukfSim
 from simulations.nonlinear_system import NonlinearSys
-from data_manager import Manager
 import numpy as np
 
 
-def sim_run(sigma_):
-    mg = Manager()
+def sim_run(sigma_, repeat_):
     # system part
     states_dimension = 3
     obs_dimension = 1
-    repeat = 100
+    repeat = repeat_
     t = 50
     Ts = 0.1
     N = int(t/Ts)
@@ -60,11 +58,5 @@ def sim_run(sigma_):
                                'mcukf states': mcukf_states_mean.tolist()},
                     'observations': {'noise_free observation': real_obs.tolist()}
                     }
+    return data_summarizes
 
-    # data mananger
-    mg.save_data(data_summarizes)
-    # mg.view_data(data_summarizes)
-    # mg.read_data()
-    mg.plot_mse()
-    # mg.plot_all()
-    # mg.show()

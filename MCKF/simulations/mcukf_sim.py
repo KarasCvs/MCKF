@@ -1,6 +1,6 @@
 from functions import nonlinear_func as N_func
 from simulations.filter_sim_base import FilterSim
-from filters.mcukf import Mcukf
+from filters.mcukf2 import Mcukf
 
 
 class McukfSim(FilterSim):
