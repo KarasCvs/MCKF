@@ -6,7 +6,7 @@ for sigma in sigmas:
     data = sim_run(sigma, 1)
     mg = Manager()
     mg.view_data(data)
-    mg.plot_states()
+    mg.plot_all()
     mg.show()
 
 # keywords = {"description": "Non-Gaussian."}

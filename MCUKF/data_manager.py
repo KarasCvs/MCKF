@@ -64,15 +64,6 @@ class Manager():
         self.plot_obs()
         self.plot_mse()
 
-    def plot_system(self):
-        plt.figure()
-        for i in range(self.states_dimension):
-            plt.subplot(100*self.states_dimension+11+i)
-            plt.plot(self.time_line, np.array(self.states["system states"])[i, :].reshape(self.N,), linewidth=1, linestyle="-", label="system states")
-            plt.grid(True)
-            plt.legend(loc='upper left')
-            plt.title(f"States {i}")
-
     def plot_states(self):
         plt.figure()
         for i in range(self.states_dimension):
