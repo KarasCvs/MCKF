@@ -1,4 +1,4 @@
-from simulation_run import sim_run
+from RunSimulation import sim_run
 from data_manager import Manager
 
 sigmas = [2]

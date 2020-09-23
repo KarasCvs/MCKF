@@ -1,7 +1,7 @@
-from simulations.ukf_sim import UkfSim
-from simulations.mcukf_sim import McukfSim
-from simulations.nonlinear_system import NonlinearSys
 import numpy as np
+from simulations import UkfSim
+from simulations import McukfSim
+from simulations import NonlinearSys
 
 
 def sim_run(sigma_, repeat_):
