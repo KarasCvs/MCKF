@@ -11,3 +11,4 @@ MCKF/.vscode/settings.json
 *.fls
 *.log
 *.synctex.gz
+.vscode/
