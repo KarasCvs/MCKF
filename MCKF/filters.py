@@ -1,4 +1,4 @@
- # There are atleast 3 ways to calculate W under ut_init,
+# There are atleast 3 ways to calculate W under ut_init,
 # No.1: The original one and Katayama's book which will is most stable. Set lambda as a conste.
 # No.2: <The Scaled Unscented Transformation> used in robot_localization too,
 # but it's not stable enough, could cause the covariance matrix negative definite
@@ -7,22 +7,19 @@
 # stable enough.
 import numpy as np
 from numpy.linalg import inv, cholesky
+from functions import LinearFunc as Func
 
 
 class Filter():
     def __init__(self):
-        pass
+        self.func = Func()
 
-    def state_func(self, F, H, Ts):
-        self.F = F
-        self.H = H
-        self.Ts = Ts
-
-    def filter_init(self, states_dimension, obs_dimension, q=0, r=3):
+    def filter_init(self, states_dimension, obs_dimension, q=0, r=3, Ts=0):
         self.states_dimension = states_dimension
         self.obs_dimension = obs_dimension
         self.noise_Q = q*q * np.identity(self.states_dimension)
         self.noise_R = r*r * np.identity(self.obs_dimension)
+        self.Ts = Ts
 
     def ut_init(self, alpha=1e-3, beta=2, kappa=0):
         self.alpha = alpha
@@ -119,12 +116,13 @@ class Mckf2(Filter):
     def estimate(self, x_prior, sensor_data, P, k):
         # priori
         self.k = k
-        H = self.H
-        x_posterior = self.F * x_prior
-        P = self.F * P * self.F.T + self.noise_Q
+        F = self.func.state_matrix(x_prior)
+        x_posterior = F * x_prior
+        P = F * P * F.T + self.noise_Q
         # posterior
+        H = self.func.obs_matrix(x_posterior)
         L = self.kernel_G(np.linalg.norm((sensor_data - H*x_posterior))*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm((x_posterior - self.F*x_prior))*inv(P))
+            self.kernel_G(np.linalg.norm((x_posterior - F*x_prior))*inv(P))
         K = inv(inv(P) + (L*H.T*self.noise_R*H))*L*H.T*inv(self.noise_R)
         x_posterior = x_posterior + K*(sensor_data - H*x_posterior)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \

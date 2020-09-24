@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.random import randn
-from functions import LinearFunc
+from functions import LinearFunc as Func
 from filters import Mckf2 as Mckf
 
 
@@ -45,15 +45,14 @@ class MckfSim(FilterSim):
     # --------------------------------init---------------------------------- #
     def __init__(self, states_dimension, obs_dimension, t, Ts, sigma_, eps_, q_, r_):
         FilterSim.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
-        self.mckf_init(sigma_, eps_)
+        self.mckf_init(Ts, sigma_, eps_)
 
     # --------------------------------mckf init---------------------------------- #
-    def mckf_init(self, sigma_, eps_):
-        function = LinearFunc()
+    def mckf_init(self, Ts, sigma_, eps_):
+        self.func = Func()
         self.mckf = Mckf()
-        self.mckf.filter_init(self.states_dimension, self.obs_dimension, self.noise_q, self.noise_r)
+        self.mckf.filter_init(self.states_dimension, self.obs_dimension, self.noise_q, self.noise_r, Ts)
         self.mckf.mc_init(sigma_, eps_)
-        self.mckf.state_func(function.F, function.H, self.Ts)
 
     def run(self, init_parameters, obs_noise, repeat=1):
         # --------------------------------main procedure---------------------------------- #
@@ -82,7 +81,7 @@ class Sys():
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, additional_noise=0):
         self.sys_init(states_dimension, obs_dimension, t, Ts)
         self.noise_init(q_)
-        self.func = LinearFunc()
+        self.func = Func()
 
     def sys_init(self, states_dimension, obs_dimension, t, Ts):
         self.states_dimension = states_dimension
@@ -99,10 +98,13 @@ class Sys():
 
     def states_init(self, X0):
         self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)
+        self.func.obs_matrix(self.states[:, 0])
         self.real_obs[:, 0] = self.func.observation_func(self.states[:, 0])
 
     def run(self):
         for i in range(1, self.N):
+            self.func.state_matrix(self.states[:, i-1], self.Ts, i)
             self.states[:, i] = self.func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
+            self.func.obs_matrix(self.states[:, i])
             self.real_obs[:, i] = self.func.observation_func(self.states[:, i])
         return self.time_line, self.states, self.real_obs

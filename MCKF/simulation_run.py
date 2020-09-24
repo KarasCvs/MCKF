@@ -23,9 +23,11 @@ def sim_run(sigma_, repeat_):
     # System initial
     sys = Sys(states_dimension, obs_dimension, t, Ts, q, r, add_r)
     sys.states_init([1.25, 0.06, 0.01, -0.003])
+    # sys.states_init([3e5, -2e4, 1e-3])
     time_line, states, real_obs = sys.run()
     # filter initial values
     filter_init = ([0, 0, 0, 0], [10, 10, 10, 10])
+    # filter_init = ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
     # mckf initial, order: x dimension, y dimension, run time, time space, repeat, α, β, kappa, sigma, eps, q, r
     mckf_sim = MckfSim(states_dimension, obs_dimension, t, Ts, sigma, eps, q, r)
     print("Simulation started.")
