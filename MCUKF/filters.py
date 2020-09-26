@@ -6,23 +6,51 @@
 # with W_m. That mean W_m(0) will not be specialization, this is work able but still, not
 # stable enough.
 import numpy as np
+from numpy.random import randn
 from numpy.linalg import inv, cholesky
+from functions import NonLinearFunc as Func
+import matplotlib.pyplot as plt
 
 
 class Filter():
-    def __init__(self):
-        pass
-
-    def state_func(self, F, H, Ts):
-        self.F = F
-        self.H = H
-        self.Ts = Ts
-
-    def filter_init(self, states_dimension, obs_dimension, q=0, r=3):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
+        self.func = Func()
         self.states_dimension = states_dimension
         self.obs_dimension = obs_dimension
-        self.noise_Q = q*q * np.identity(self.states_dimension)
-        self.noise_R = r*r * np.identity(self.obs_dimension)
+        self.t = t
+        self.Ts = Ts
+        self.N = int(self.t/self.Ts)
+        self.time_line = np.linspace(0, self.t, self.N)
+        self.states = np.mat(np.zeros((states_dimension, self.N)))
+        self.P = np.mat(np.identity(states_dimension))
+        self.mse1 = np.mat(np.zeros((states_dimension, self.N)))
+        self.noise_q = q_
+        self.noise_r = r_
+        self.states_dimension = states_dimension
+        self.obs_dimension = obs_dimension
+        self.noise_Q = self.noise_q**2 * np.identity(self.states_dimension)
+        self.noise_R = self.noise_r**2 * np.identity(self.obs_dimension)
+        self.F = self.func.state_func
+        self.H = self.func.observation_func
+
+    def states_init(self, init_parameters):
+        ukf0, P0 = init_parameters
+        self.states[:, 0] = np.array(ukf0).reshape(self.states_dimension, 1)
+        self.P = np.diag(P0)
+
+    def read_data(self, states, obs):
+        self.real_states = states
+        self.obs = obs
+
+    def MSE(self):
+        for i in range(1, self.N):
+            self.mse1[:, i] = self.real_states[:, i] - self.states[:, i]
+            self.mse1[:, i] = np.power(self.mse1[:, i], 2)
+        return self.mse1
+
+    def mc_init(self, sigma, eps):
+        self.kernel_G = lambda x: np.exp(-(pow(np.linalg.norm(x), 2)/(2*sigma*sigma)))
+        self.eps = eps
 
     def ut_init(self, alpha=1e-3, beta=2, kappa=0):
         self.alpha = alpha
@@ -54,14 +82,120 @@ class Filter():
         trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T + Noise_cov
         return trans_mean, trans_points, trans_cov, trans_dev
 
+    def run(self, init_parameters, obs_noise, repeat=1):
+        # --------------------------------main procedure---------------------------------- #
+        mc_count = 0
+        states_mean = 0
+        mse1 = 0
+        for j in range(repeat):
+            self.states_init(init_parameters)
+            for i in range(1, self.N):
+                self.states[:, i], self.P, count = \
+                    self.estimate(self.states[:, i-1],
+                                  self.obs[:, i]+obs_noise[j][:, i],
+                                  self.P, i)
+                mc_count += count
+            states_mean += self.states
+            mse1 += self.MSE()
+        states_mean /= repeat
+        mse1 /= repeat
+        mse = mse1.sum(axis=1)/self.N
+        mc_count /= self.N*repeat
+        return states_mean, mse1, mse, mc_count, self.time_line
+
+
+class LinearSys():
+    # --------------------------------init---------------------------------- #
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, additional_noise=0):
+        self.func = Func()
+        self.states_dimension = states_dimension
+        self.obs_dimension = obs_dimension
+        self.t = t
+        self.Ts = Ts
+        self.N = int(self.t/self.Ts)
+        self.time_line = np.linspace(0, self.t, self.N)
+        self.states = np.mat(np.zeros((states_dimension, self.N)))
+        self.real_obs = np.mat(np.zeros((obs_dimension, self.N)))
+        self.state_noise = np.mat(q_ * randn(self.states_dimension, self.N))
+        self.noise_r = r_
+        self.add_r = additional_noise
+
+    # Generate noise lists.
+    def noise_init(self, repeat=1):
+        self.obs_noise = [np.mat(self.noise_r*randn(self.obs_dimension, self.N)
+                                 + self.add_r*randn(self.obs_dimension, self.N)) for _ in range(repeat)]
+        return self.obs_noise
+
+    def states_init(self, X0):
+        self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)
+        self.func.obs_matrix(self.states[:, 0])
+        self.real_obs[:, 0] = self.func.observation_func(self.states[:, 0])
+
+    def run(self):
+        for i in range(1, self.N):
+            self.func.state_matrix(self.states[:, i-1], self.Ts, i)
+            self.states[:, i] = self.func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
+            self.func.obs_matrix(self.states[:, i])
+            self.real_obs[:, i] = self.func.observation_func(self.states[:, i])
+        return self.time_line, self.states, self.real_obs
+
+    def plot(self):
+        for i in range(self.states_dimension):
+            plt.subplot(100*self.states_dimension+11+i)
+            plt.plot(self.time_line, np.array(self.states)[i, :].reshape(self.N,), linewidth=1, linestyle="-", label="system states")
+            plt.grid(True)
+            plt.legend(loc='upper left')
+            plt.title(f"States {i}")
+        plt.show()
+
+
+class NonlinearSys():
+    # --------------------------------init---------------------------------- #
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, additional_noise=0):
+        self.func = Func()
+        self.states_dimension = states_dimension
+        self.obs_dimension = obs_dimension
+        self.t = t
+        self.Ts = Ts
+        self.N = int(self.t/self.Ts)
+        self.time_line = np.linspace(0, self.t, self.N)
+        self.states = np.mat(np.zeros((states_dimension, self.N)))
+        self.real_obs = np.mat(np.zeros((obs_dimension, self.N)))
+        self.state_noise = np.mat(q_ * randn(self.states_dimension, self.N))
+        self.noise_r = r_
+        self.add_r = additional_noise
+
+    # Generate noise lists.
+    def noise_init(self, repeat=1):
+        self.obs_noise = [np.mat(self.noise_r*randn(self.obs_dimension, self.N)
+                                 + self.add_r*randn(self.obs_dimension, self.N)) for _ in range(repeat)]
+        return self.obs_noise
+
+    def states_init(self, X0):
+        self.states[:, 0] = np.array(X0).reshape(self.states_dimension, 1)
+        self.real_obs[:, 0] = self.func.observation_func(self.states[:, 0])
+
+    def run(self):
+        for i in range(1, self.N):
+            self.states[:, i] = self.func.state_func(self.states[:, i-1], self.Ts, i) + self.state_noise[:, i]
+            self.real_obs[:, i] = self.func.observation_func(self.states[:, i])
+        return self.time_line, self.states, self.real_obs
+
+    def plot(self):
+        for i in range(self.states_dimension):
+            plt.subplot(100*self.states_dimension+11+i)
+            plt.plot(self.time_line, np.array(self.states)[i, :].reshape(self.N,), linewidth=1, linestyle="-", label="system states")
+            plt.grid(True)
+            plt.legend(loc='upper left')
+            plt.title(f"States {i}")
+        plt.show()
+
 
 class Mcukf(Filter):
-    def __init__(self):
-        Filter.__init__(self)
-
-    def mc_init(self, sigma, eps):
-        self.kernel_G = lambda x: np.exp(-((x*x)/(2*sigma*sigma)))
-        self.eps = eps
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, alpha, beta, kappa, sigma, eps):
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
+        self.ut_init(alpha, beta, kappa)
+        self.mc_init(sigma, eps)
 
     def estimate(self, x_prior, sensor_data, P, k):
         # priori
@@ -115,13 +249,12 @@ class Mcukf(Filter):
         return np.diag(entropy_x), np.diag(entropy_y)
 
 
+# This is a version that I'm trying to use Dan.S's method on Ukf.
 class Mcukf2(Filter):
-    def __init__(self):
-        Filter.__init__(self)
-
-    def mc_init(self, sigma, eps):
-        self.kernel_G = lambda x: np.exp(-((x*x)/(2*sigma*sigma)))
-        self.eps = eps
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, alpha, beta, kappa, sigma, eps):
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
+        self.ut_init(alpha, beta, kappa)
+        self.mc_init(sigma, eps)
 
     def estimate(self, x_prior, sensor_data, P, k):
         # priori
@@ -158,8 +291,9 @@ class Mcukf2(Filter):
 
 
 class Ukf(Filter):
-    def __init__(self):
-        Filter.__init__(self)
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, alpha, beta, kappa):
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
+        self.ut_init(alpha, beta, kappa)
 
     def estimate(self, x_prior, sensor_data, P, k):
         # priori
@@ -174,4 +308,78 @@ class Ukf(Filter):
         K = P_xz * np.linalg.inv(P_zz)
         x_posterior = x_mean + K*(sensor_data - obs_mean)
         P_posterior = P_xx - K*P_zz*K.T
-        return x_posterior, P_posterior
+        return x_posterior, P_posterior, 0
+
+
+# Fixed Point Iteration
+class Mckf1(Filter):
+    def __init__(self):
+        Filter.__init__(self)
+
+    def estimate(self, x_prior, sensor_data, P, k):
+        # priori
+        self.k = k
+        H = self.H
+        x_posterior = self.F * x_prior
+        P = self.F * P * self.F.T + self.noise_Q
+        # posterior
+        P_sqrt = cholesky(P)
+        R_sqrt = cholesky(self.noise_R)
+        B = np.hstack((np.vstack((P_sqrt, np.zeros((self.obs_dimension, self.states_dimension)))),
+                       np.vstack((np.zeros((self.states_dimension, self.obs_dimension)), R_sqrt))))
+        B_inv = inv(B)
+        W = B_inv*np.vstack((np.identity(self.states_dimension), H))
+        D = B_inv*np.vstack((x_posterior, sensor_data))
+        X_temp = x_posterior
+        Evaluation = 1
+        mc_count = 0
+        while Evaluation > self.eps:
+            E = D - W*X_temp
+            Cx, Cy = self.mc(E)
+            P_mc = P_sqrt*inv(Cx)*P_sqrt
+            R_mc = R_sqrt*inv(Cy)*R_sqrt
+            K = P_sqrt*H.T*inv(H*P_mc*H.T+R_mc)
+            x_posterior = x_posterior + K*(sensor_data - H*x_posterior)
+            Evaluation = np.linalg.norm(x_posterior - X_temp)/np.linalg.norm(X_temp)
+            X_temp = x_posterior
+            mc_count += 1
+        P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
+            + K*self.noise_R*K.T
+        return x_posterior, P_posterior, mc_count
+
+    def mc(self, E):
+        entropy_x = np.zeros(self.states_dimension)
+        entropy_y = np.zeros(self.obs_dimension)
+        for i in range(self.states_dimension):
+            entropy_x[i] = self.kernel_G(E[i])
+            if entropy_x[i] < 1e-9:
+                entropy_x[i] = 1e-9
+        for i in range(self.obs_dimension):
+            entropy_y[i] = self.kernel_G(E[i+self.states_dimension])
+            if entropy_y[i] < 1e-9:
+                entropy_y[i] = 1e-9
+        return np.diag(entropy_x), np.diag(entropy_y)
+
+
+# Dan.S method, this works.
+class Mckf2(Filter):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, sigma, eps):
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
+        self.mc_init(sigma, eps)
+
+    def estimate(self, x_prior, sensor_data, P, k):
+        # priori
+        self.k = k
+        F = self.func.state_matrix(x_prior, self.Ts)
+        x_posterior = F * x_prior
+        # For time-variant system
+        P = F * P * F.T + self.noise_Q
+        # posterior
+        H = self.func.obs_matrix(x_posterior)
+        L = self.kernel_G(np.linalg.norm((sensor_data - H*x_posterior))*inv(self.noise_R)) / \
+            self.kernel_G(np.linalg.norm((x_posterior - F*x_prior))*inv(P))
+        K = inv(inv(P) + (L*H.T*self.noise_R*H))*L*H.T*inv(self.noise_R)
+        x_posterior = x_posterior + K*(sensor_data - H*x_posterior)
+        P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
+            + K*self.noise_R*K.T
+        return x_posterior, P_posterior, 0

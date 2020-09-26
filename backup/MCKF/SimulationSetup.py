@@ -1,5 +1,5 @@
-from simulations import MckfSim
-from simulations import Sys
+from filters import Mckf2 as Mckf
+from filters import Sys
 import numpy as np
 
 
@@ -30,7 +30,7 @@ def sim_run(sigma_, repeat_):
     # filter_init = ([0, 0, 0, 0], [10, 10, 10, 10])
     filter_init = ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
     # mckf initial, order: x dimension, y dimension, run time, time space, repeat, α, β, kappa, sigma, eps, q, r
-    mckf_sim = MckfSim(states_dimension, obs_dimension, t, Ts, sigma, eps, q, r)
+    mckf_sim = Mckf(states_dimension, obs_dimension, t, Ts, q, r, sigma, eps)
     print("Simulation started.")
     mckf_sim.read_data(states, real_obs)
     obs_noise = mckf_sim.noise_init(additional_noise, repeat)
@@ -43,7 +43,7 @@ def sim_run(sigma_, repeat_):
                     'parameters': {'repeat': repeat, 'time': t, 'ts': Ts, 'q': q, 'r': r, 'add noise': add_r,
                                    'sigma': sigma, 'eps': eps},
                     'mse': {'mckf mse': mckf_MSE.tolist()},
-                    'mse1': { 'mckf mse1': mckf_MSE1.tolist()},
+                    'mse1': {'mckf mse1': mckf_MSE1.tolist()},
                     'time line': time_line.tolist(), 'mc iteration': mc_count,
                     'states': {'system states': states.tolist(), 'mckf states': mckf_states_mean.tolist()},
                     'observations': {'noise_free observation': real_obs.tolist()}

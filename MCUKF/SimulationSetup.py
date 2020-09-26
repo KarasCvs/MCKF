@@ -1,7 +1,7 @@
-import numpy as np
-from simulations import UkfSim
-from simulations import McukfSim
-from simulations import NonlinearSys
+from filters import Mcukf as Mcukf
+from filters import Ukf as Ukf
+from filters import Mckf2 as Mckf
+from filters import NonlinearSys as Sys
 
 
 def sim_run(sigma_, repeat_):
@@ -11,7 +11,6 @@ def sim_run(sigma_, repeat_):
     repeat = repeat_
     t = 50
     Ts = 0.1
-    N = int(t/Ts)
     # MCUKF part
     sigma = sigma_
     eps = 1e-6
@@ -22,28 +21,34 @@ def sim_run(sigma_, repeat_):
     # noise
     q = 0
     r = 15.5
-    add_r = 95
-    additional_noise = add_r*np.random.randn(obs_dimension, N)
+    add_r = 0
+    # additional_noise = add_r*np.random.randn(obs_dimension, N)
 
     # System initial
-    sys = NonlinearSys(states_dimension, obs_dimension, t, Ts, q, r, add_r)
+    sys = Sys(states_dimension, obs_dimension, t, Ts, q, r, add_r)
     sys.states_init([3e5, -2e4, 1e-3])
     time_line, states, real_obs = sys.run()
-    # filter initial values
+    # Filter initial values
     filter_init = ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
+    # Initial noise lists.
+    obs_noise = sys.noise_init(repeat)
 
-    # Ukf initial, order: x dimension, y dimension, run time, time space, α, β, kappa, q, r
-    ukf_sim = UkfSim(states_dimension, obs_dimension, t, Ts, alpha, beta, kappa, q, r)
-    # Mcukf initial, order: x dimension, y dimension, run time, time space, repeat, α, β, kappa, sigma, eps, q, r
-    mcukf_sim = McukfSim(states_dimension, obs_dimension, t, Ts, alpha, beta, kappa, sigma, eps, q, r)
     print("Simulation started.")
+    # Mckf initial, order: x dimension, y dimension, run time, time space, sigma, eps
+    mckf_sim = Mckf(states_dimension, obs_dimension, t, Ts, q, r, sigma, eps)
+    mckf_sim.read_data(states, real_obs)
+    mckf_states_mean, mckf_MSE1, mckf_MSE, _, _ = mckf_sim.run(filter_init, obs_noise, repeat)
+    # Ukf initial, order: x dimension, y dimension, run time, time space, q, r, α, β, kappa
+    ukf_sim = Ukf(states_dimension, obs_dimension, t, Ts, q, r, alpha, beta, kappa)
     ukf_sim.read_data(states, real_obs)
+    ukf_states_mean, ukf_MSE1, ukf_MSE, _, _ = ukf_sim.run(filter_init, obs_noise, repeat)
+    # Mcukf initial, order: x dimension, y dimension, run time, time space, q, r, α, β, kappa, sigma, eps
+    mcukf_sim = Mcukf(states_dimension, obs_dimension, t, Ts, q, r, alpha, beta, kappa, sigma, eps)
     mcukf_sim.read_data(states, real_obs)
-    obs_noise = ukf_sim.noise_init(additional_noise, repeat)
-    _, ukf_states_mean, ukf_MSE1, ukf_MSE = ukf_sim.run(filter_init, obs_noise, repeat)
-    _, mcukf_states_mean, mcukf_MSE1, mcukf_MSE, mc_count = mcukf_sim.run(filter_init, obs_noise, repeat)
+    mcukf_states_mean, mcukf_MSE1, mcukf_MSE, mc_count, _ = mcukf_sim.run(filter_init, obs_noise, repeat)
+    print("Simulation done.")
 
-    # build a data set
+    # Build a data set
     description = "Non-Gaussian2."
     data_summarizes = {
                     'description': description,
@@ -59,4 +64,3 @@ def sim_run(sigma_, repeat_):
                     'observations': {'noise_free observation': real_obs.tolist()}
                     }
     return data_summarizes
-
