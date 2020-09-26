@@ -7,7 +7,7 @@
 # stable enough.
 import numpy as np
 from numpy.linalg import inv, cholesky
-from functions import LinearFunc as Func
+from functions import NonLinearFunc as Func
 
 
 class Filter():
@@ -116,7 +116,7 @@ class Mckf2(Filter):
     def estimate(self, x_prior, sensor_data, P, k):
         # priori
         self.k = k
-        F = self.func.state_matrix(x_prior)
+        F = self.func.state_matrix(x_prior, self.Ts)
         x_posterior = F * x_prior
         P = F * P * F.T + self.noise_Q
         # posterior

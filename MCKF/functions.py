@@ -28,7 +28,8 @@ class NonLinearFunc():
         pass
 
     def state_matrix(self, states, Ts=0, k=0):
-        self.F = np.matrix(([0, 1, 0], [0, float(2*math.exp(-states[0]/2e4) * states[1] * states[2]/2 - 32.2/states[1]), 0], [0, 0, 1]))
+        self.F = np.matrix(([0, 1, 0], [0, float(2*math.exp(-states[0]/2e4) * states[1] * states[2]/2 - 32.2/states[1]), 0], [0, 0, 0]))
+        self.F = np.eye(states.shape[0]) + Ts*self.F
         return self.F
 
     def obs_matrix(self, states, Ts=0, k=0):
@@ -36,7 +37,7 @@ class NonLinearFunc():
         return self.H
 
     def state_func(self, states, Ts, k=0):
-        states_ = self.F*states
+        states_ = self.F*states  # states + Ts*(self.F*states)
         return states_
 
     def observation_func(self, states, Ts=0, k=0):

@@ -1,7 +1,8 @@
 import numpy as np
 from numpy.random import randn
-from functions import LinearFunc as Func
+from functions import NonLinearFunc as Func
 from filters import Mckf2 as Mckf
+import matplotlib.pyplot as plt
 
 
 class FilterSim():
@@ -108,3 +109,12 @@ class Sys():
             self.func.obs_matrix(self.states[:, i])
             self.real_obs[:, i] = self.func.observation_func(self.states[:, i])
         return self.time_line, self.states, self.real_obs
+
+    def plot(self):
+        for i in range(self.states_dimension):
+            plt.subplot(100*self.states_dimension+11+i)
+            plt.plot(self.time_line, np.array(self.states)[i, :].reshape(self.N,), linewidth=1, linestyle="-", label="system states")
+            plt.grid(True)
+            plt.legend(loc='upper left')
+            plt.title(f"States {i}")
+        plt.show()

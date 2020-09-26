@@ -1,12 +1,13 @@
-from simulation_run import sim_run
+from simulation_setup import sim_run
 from data_manager import Manager
 
 sigmas = [2]
+repeat = 10
 for sigma in sigmas:
-    data = sim_run(sigma, 1)
+    data = sim_run(sigma, repeat)
     mg = Manager()
     mg.view_data(data)
-    mg.plot_states()
+    mg.plot_all()
     mg.show()
 
 # keywords = {"description": "Non-Gaussian."}
