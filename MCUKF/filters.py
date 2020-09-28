@@ -5,6 +5,7 @@
 # No.3: I tried to use the same way that No.2 to calculate W_m, but make W_c exactly equal
 # with W_m. That mean W_m(0) will not be specialization, this is work able but still, not
 # stable enough.
+import sympy as sy
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import inv, cholesky
@@ -320,7 +321,7 @@ class Mckf1(Filter):
         # priori
         self.k = k
         H = self.H
-        x_posterior = self.F * x_prior
+        x_prior = self.F * x_prior
         P = self.F * P * self.F.T + self.noise_Q
         # posterior
         P_sqrt = cholesky(P)
@@ -329,8 +330,8 @@ class Mckf1(Filter):
                        np.vstack((np.zeros((self.states_dimension, self.obs_dimension)), R_sqrt))))
         B_inv = inv(B)
         W = B_inv*np.vstack((np.identity(self.states_dimension), H))
-        D = B_inv*np.vstack((x_posterior, sensor_data))
-        X_temp = x_posterior
+        D = B_inv*np.vstack((x_prior, sensor_data))
+        X_temp = x_prior
         Evaluation = 1
         mc_count = 0
         while Evaluation > self.eps:
@@ -339,7 +340,7 @@ class Mckf1(Filter):
             P_mc = P_sqrt*inv(Cx)*P_sqrt
             R_mc = R_sqrt*inv(Cy)*R_sqrt
             K = P_sqrt*H.T*inv(H*P_mc*H.T+R_mc)
-            x_posterior = x_posterior + K*(sensor_data - H*x_posterior)
+            x_posterior = X_temp + K*(sensor_data - H*X_temp)
             Evaluation = np.linalg.norm(x_posterior - X_temp)/np.linalg.norm(X_temp)
             X_temp = x_posterior
             mc_count += 1
@@ -371,15 +372,47 @@ class Mckf2(Filter):
         # priori
         self.k = k
         F = self.func.state_matrix(x_prior, self.Ts)
-        x_posterior = F * x_prior
+        x_prior = F * x_prior
         # For time-variant system
         P = F * P * F.T + self.noise_Q
         # posterior
-        H = self.func.obs_matrix(x_posterior)
-        L = self.kernel_G(np.linalg.norm((sensor_data - H*x_posterior))*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm((x_posterior - F*x_prior))*inv(P))
+        H = self.func.obs_matrix(x_prior)
+        L = self.kernel_G(np.linalg.norm((sensor_data - H*x_prior))*inv(self.noise_R)) / \
+            self.kernel_G(np.linalg.norm((x_prior - F*x_prior))*inv(P))
         K = inv(inv(P) + (L*H.T*self.noise_R*H))*L*H.T*inv(self.noise_R)
-        x_posterior = x_posterior + K*(sensor_data - H*x_posterior)
+        x_posterior = x_prior + K*(sensor_data - H*x_prior)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.noise_R*K.T
+        return x_posterior, P_posterior, 0
+
+
+class Ekf(Filter):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
+
+    # Calculate Jacobian matrix, for EKF. I think this is a correct version
+    # compared the calculate by hand one in <functions>.
+    def jacobian(self, function, length):
+        args = []
+        for i in range(length):
+            exec(f"x{i} = sy.symbols(f'x{i}')")
+            exec(f"args.append(x{i})")
+        variables = sy.Matrix(args)
+        function = sy.Matrix(function(args, self.Ts))
+        jacobian = function.jacobian(variables)
+        return jacobian
+
+    def estimate(self, x_prior, sensor_data, P, k):
+        # priori
+        self.k = k
+        x_prior = self.func.state_func(x_prior, self.Ts)
+        # Calculate jacobin
+        F = self.func.states_jacobian(x_prior, self.Ts)
+        H = self.func.obs_jacobian(x_prior)
+        # For time-variant system
+        P = F * P * F.T + self.noise_Q
+        # posterior
+        K = P*H.T*inv(H*P*H.T + self.noise_R)
+        x_posterior = x_prior + K*(sensor_data - self.func.observation_func(x_prior))
+        P_posterior = (np.eye(self.states_dimension)-K*H)*P
         return x_posterior, P_posterior, 0

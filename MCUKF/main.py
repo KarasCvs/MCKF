@@ -3,7 +3,7 @@ from data_manager import Manager
 
 sigmas = [2]
 for sigma in sigmas:
-    data = sim_run(sigma, 1)
+    data = sim_run(1, sigma, ekf=1)
     mg = Manager()
     mg.view_data(data)
     mg.plot_all()

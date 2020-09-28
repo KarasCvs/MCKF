@@ -39,10 +39,9 @@ class Manager():
 
     def view_data(self, data):
         self.data = data
-        self.parameters = data['parameters']
-        self.states_dimension = data['shapes']['states dimension']
-        self.obs_dimension = data['shapes']['obs dimension']
-        self.N = int(data['parameters']['time']/data['parameters']['ts'])
+        self.states_dimension = data['states dimension']
+        self.obs_dimension = data['obs dimension']
+        self.N = int(data['time']/data['ts'])
         self.time_line = np.array(data['time line'])
         self.states = data['states']
         self.observations = data['observations']
@@ -93,13 +92,13 @@ class Manager():
             plt.title(f"MSE of state{i}")
 
     def plot_mse(self):
-        print(f'Sigma = {self.parameters["sigma"]}')
         for i in self.mse:
             print(f'{i}=\n{self.mse[i]}\n')
 
     def show(self):
         plt.show()
 
+    # find in dict.
     def find(self, key, filename=None):
         key = key.lower()
         self.read_data(filename)
@@ -117,6 +116,7 @@ class Manager():
             except KeyError:
                 print("Can't find key.\n")
 
+    # locate in files.
     def locate(self, keywords):
         filenames = os.listdir(self.path)
         fitted_list = []
