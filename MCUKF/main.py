@@ -1,11 +1,14 @@
 from SimulationSetup import sim_run
 from data_manager import Manager
 
-sigmas = [2]
+sigmas = [4]
+repeat = 10
+mg = Manager()
 for sigma in sigmas:
-    data = sim_run(1, sigma, ekf=1)
-    mg = Manager()
+    data = sim_run(repeat, sigma, ukf=1, ekf=1, mcekf=1)
     mg.view_data(data)
+    # print(mg.states['mcekf states'])
+    # mg.save_data(data)
     mg.plot_all()
     mg.show()
 

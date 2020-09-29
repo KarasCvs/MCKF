@@ -5,6 +5,7 @@
 # No.3: I tried to use the same way that No.2 to calculate W_m, but make W_c exactly equal
 # with W_m. That mean W_m(0) will not be specialization, this is work able but still, not
 # stable enough.
+import time
 import sympy as sy
 import numpy as np
 from numpy.random import randn
@@ -35,8 +36,8 @@ class Filter():
         self.H = self.func.observation_func
 
     def states_init(self, init_parameters):
-        ukf0, P0 = init_parameters
-        self.states[:, 0] = np.array(ukf0).reshape(self.states_dimension, 1)
+        filter0, P0 = init_parameters
+        self.states[:, 0] = np.array(filter0).reshape(self.states_dimension, 1)
         self.P = np.diag(P0)
 
     def read_data(self, states, obs):
@@ -50,8 +51,14 @@ class Filter():
         return self.mse1
 
     def mc_init(self, sigma, eps):
-        self.kernel_G = lambda x: np.exp(-(pow(np.linalg.norm(x), 2)/(2*sigma*sigma)))
+        self.sigma = sigma
         self.eps = eps
+
+    def kernel_G(self, x):
+        res = np.exp(-(pow(np.linalg.norm(x), 2)/(2*self.sigma**2)))
+        if res < 1e-40:
+            res += 1e-40
+        return res
 
     def ut_init(self, alpha=1e-3, beta=2, kappa=0):
         self.alpha = alpha
@@ -66,10 +73,10 @@ class Filter():
         self.W_cov = self.W_mean               # No.1 and No.3
         # self.W_cov[0] = self.W_cov[0] + (1-self.alpha*self.alpha+self.beta)   # No.2
 
-    def sigma_points(self, x_prior, P):
+    def sigma_points(self, x_previous, P):
         sigma_A_ = np.linalg.cholesky((self.c_) * P)
-        sigma_X_ = x_prior * np.ones((1, self.states_dimension))
-        X_sigmas = np.hstack((x_prior, sigma_X_+sigma_A_, sigma_X_-sigma_A_))
+        sigma_X_ = x_previous * np.ones((1, self.states_dimension))
+        X_sigmas = np.hstack((x_previous, sigma_X_+sigma_A_, sigma_X_-sigma_A_))
         return X_sigmas
 
     def ut(self, transfunc, ut_input, dimension, Noise_cov):
@@ -88,6 +95,7 @@ class Filter():
         mc_count = 0
         states_mean = 0
         mse1 = 0
+        start = time.clock()
         for j in range(repeat):
             self.states_init(init_parameters)
             for i in range(1, self.N):
@@ -98,10 +106,12 @@ class Filter():
                 mc_count += count
             states_mean += self.states
             mse1 += self.MSE()
+        end = time.clock()
         states_mean /= repeat
         mse1 /= repeat
         mse = mse1.sum(axis=1)/self.N
         mc_count /= self.N*repeat
+        self.run_time = end - start
         return states_mean, mse1, mse, mc_count, self.time_line
 
 
@@ -198,10 +208,10 @@ class Mcukf(Filter):
         self.ut_init(alpha, beta, kappa)
         self.mc_init(sigma, eps)
 
-    def estimate(self, x_prior, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        X_sigmas = self.sigma_points(x_prior, P)
+        X_sigmas = self.sigma_points(x_previous, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas, self.states_dimension, self.noise_Q)
         Z_sigmas = self.sigma_points(x_mean, P_xx)
         obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, Z_sigmas, self.obs_dimension, self.noise_R)
@@ -257,10 +267,10 @@ class Mcukf2(Filter):
         self.ut_init(alpha, beta, kappa)
         self.mc_init(sigma, eps)
 
-    def estimate(self, x_prior, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        X_sigmas = self.sigma_points(x_prior, P)
+        X_sigmas = self.sigma_points(x_previous, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas, self.states_dimension, self.noise_Q)
         obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.obs_dimension, self.noise_R)
         Z_sigmas = self.sigma_points(x_mean, P_xx)
@@ -270,7 +280,7 @@ class Mcukf2(Filter):
         H = inv(P_xx)*P_xz
         # 先测试用obs_mean和p_zz的组合计算L
         L = self.kernel_G(np.linalg.norm((sensor_data - obs_mean))*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm((x_mean-self.F(x_prior, self.Ts)))*inv(P_xx))
+            self.kernel_G(np.linalg.norm((x_mean-self.F(x_previous, self.Ts)))*inv(P_xx))
         K = inv(P_xx+(P_zz-L*H*self.noise_R*H.T))*H*inv(self.noise_R)
         x_posterior = x_mean + K*(sensor_data - obs_mean)
         P_posterior = (np.eye(self.states_dimension)-K*H.T)*P_xx*(np.eye(self.states_dimension)-K*H.T).T \
@@ -296,10 +306,10 @@ class Ukf(Filter):
         Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
         self.ut_init(alpha, beta, kappa)
 
-    def estimate(self, x_prior, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        X_sigmas = self.sigma_points(x_prior, P)
+        X_sigmas = self.sigma_points(x_previous, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas, self.states_dimension, self.noise_Q)
         obs_mean, obs_points, P_zz, z_dev = self.ut(self.H, x_points, self.obs_dimension, self.noise_R)
         Z_sigmas = self.sigma_points(x_mean, P_xx)
@@ -317,11 +327,11 @@ class Mckf1(Filter):
     def __init__(self):
         Filter.__init__(self)
 
-    def estimate(self, x_prior, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
         H = self.H
-        x_prior = self.F * x_prior
+        x_prior = self.F * x_previous
         P = self.F * P * self.F.T + self.noise_Q
         # posterior
         P_sqrt = cholesky(P)
@@ -368,18 +378,18 @@ class Mckf2(Filter):
         Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
         self.mc_init(sigma, eps)
 
-    def estimate(self, x_prior, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        F = self.func.state_matrix(x_prior, self.Ts)
-        x_prior = F * x_prior
+        F = self.func.state_matrix(x_previous, self.Ts)
+        x_prior = F * x_previous
         # For time-variant system
         P = F * P * F.T + self.noise_Q
         # posterior
         H = self.func.obs_matrix(x_prior)
         L = self.kernel_G(np.linalg.norm((sensor_data - H*x_prior))*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm((x_prior - F*x_prior))*inv(P))
-        K = inv(inv(P) + (L*H.T*self.noise_R*H))*L*H.T*inv(self.noise_R)
+            self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*inv(P))
+        K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - H*x_prior)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.noise_R*K.T
@@ -402,12 +412,12 @@ class Ekf(Filter):
         jacobian = function.jacobian(variables)
         return jacobian
 
-    def estimate(self, x_prior, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_prior, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts)
         # Calculate jacobin
-        F = self.func.states_jacobian(x_prior, self.Ts)
+        F = self.func.states_jacobian(x_previous, self.Ts)
         H = self.func.obs_jacobian(x_prior)
         # For time-variant system
         P = F * P * F.T + self.noise_Q
@@ -415,4 +425,40 @@ class Ekf(Filter):
         K = P*H.T*inv(H*P*H.T + self.noise_R)
         x_posterior = x_prior + K*(sensor_data - self.func.observation_func(x_prior))
         P_posterior = (np.eye(self.states_dimension)-K*H)*P
+        return x_posterior, P_posterior, 0
+
+
+class Mcekf(Filter):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, sigma, eps=0):
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
+        self.mc_init(sigma, eps)
+
+    # Calculate Jacobian matrix, for EKF. I think this is a correct version
+    # compared the calculate by hand one in <functions>.
+    def jacobian(self, function, length):
+        args = []
+        for i in range(length):
+            exec(f"x{i} = sy.symbols(f'x{i}')")
+            exec(f"args.append(x{i})")
+        variables = sy.Matrix(args)
+        function = sy.Matrix(function(args, self.Ts))
+        jacobian = function.jacobian(variables)
+        return jacobian
+
+    def estimate(self, x_previous, sensor_data, P, k):
+        # priori
+        self.k = k
+        x_prior = self.func.state_func(x_previous, self.Ts)
+        # Calculate jacobin
+        F = self.func.states_jacobian(x_previous, self.Ts)
+        H = self.func.obs_jacobian(x_prior)
+        # For time-variant system
+        P = F * P * F.T + self.noise_Q
+        # posterior
+        L = self.kernel_G(np.linalg.norm((sensor_data - H*x_prior))*inv(self.noise_R)) / \
+            self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*inv(P))
+        K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
+        x_posterior = x_prior + K*(sensor_data - self.func.observation_func(x_prior))
+        P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
+            + K*self.noise_R*K.T
         return x_posterior, P_posterior, 0

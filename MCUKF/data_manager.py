@@ -47,6 +47,8 @@ class Manager():
         self.observations = data['observations']
         self.mse1 = data['mse1']
         self.mse = data['mse']
+        self.states = data['states']
+        self.run_time = data['run time']
 
     def read_data(self, filename=None):
         if filename is None:
@@ -62,6 +64,7 @@ class Manager():
         self.plot_mse1()
         self.plot_obs()
         self.plot_mse()
+        print(f"Filters time cost:\n{self.run_time}")
 
     def plot_states(self):
         plt.figure()
