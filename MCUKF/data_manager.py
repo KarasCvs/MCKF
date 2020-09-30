@@ -23,9 +23,12 @@ class Manager():
             noise = json.loads(noise_json)
         return np.mat(noise['obs_noise'])
 
-    def save_data(self, data):
+    def save_data(self, data, name=None):
         time_ = time.strftime('%Y-%m-%d %H.%M.%S', time.localtime())
-        filename = os.path.join(self.path, time_+'.json')
+        if name is None:
+            filename = os.path.join(self.path, time_+'.json')
+        else:
+            filename = os.path.join(self.path, name+'.json')
         self.view_data(data)
         if not os.path.exists(self.path):
             os.makedirs(self.path)
@@ -53,7 +56,7 @@ class Manager():
     def read_data(self, filename=None):
         if filename is None:
             filename = 'LastSimulation.json'
-        with open(os.path.join(self.path, filename), 'r') as f:
+        with open(os.path.join(self.path, filename+'.json'), 'r') as f:
             json_data = f.read()
             data = json.loads(json_data)
         self.view_data(data)
@@ -98,19 +101,30 @@ class Manager():
         for i in self.mse:
             print(f'{i}=\n{self.mse[i]}\n')
 
+    def plot(self, target, filename=None):
+        data = np.array(self.find(target, filename))
+        for i in range(data.shape[0]):
+            plt.plot(self.time_line, data.reshape(data.shape[1]))
+            plt.grid(True)
+            plt.legend(loc='upper left')
+            plt.title(target)
+
     def show(self):
         plt.show()
 
-    # find in dict.
+    # find in dict. 这个应该改成递归.
     def find(self, key, filename=None):
         key = key.lower()
-        self.read_data(filename)
         for i in self.data:
             try:
                 if i == key:
                     return self.data[i]
                 if type(self.data[i]) is dict:
                     for j in self.data[i]:
+                        if type(self.data[i][j]) is dict:
+                            for n in self.data[i][j]:
+                                if n == key:
+                                    return self.data[i][j][n]
                         if j == key:
                             return self.data[i][j]
                 else:

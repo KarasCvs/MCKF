@@ -6,6 +6,7 @@
 # with W_m. That mean W_m(0) will not be specialization, this is work able but still, not
 # stable enough.
 import time
+import math
 import sympy as sy
 import numpy as np
 from numpy.random import randn
@@ -50,14 +51,14 @@ class Filter():
             self.mse1[:, i] = np.power(self.mse1[:, i], 2)
         return self.mse1
 
-    def mc_init(self, sigma, eps):
+    def mc_init(self, sigma, eps=1e-6):
         self.sigma = sigma
         self.eps = eps
 
     def kernel_G(self, x):
-        res = np.exp(-(pow(np.linalg.norm(x), 2)/(2*self.sigma**2)))
-        if res < 1e-40:
-            res += 1e-40
+        res = np.exp(-(pow(np.linalg.norm(x), 2)/(2*(self.sigma**2))))
+        if res < 1e-5:
+            res = 1e-5
         return res
 
     def ut_init(self, alpha=1e-3, beta=2, kappa=0):
@@ -117,7 +118,7 @@ class Filter():
 
 class LinearSys():
     # --------------------------------init---------------------------------- #
-    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, additional_noise=0):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
         self.func = Func()
         self.states_dimension = states_dimension
         self.obs_dimension = obs_dimension
@@ -129,12 +130,11 @@ class LinearSys():
         self.real_obs = np.mat(np.zeros((obs_dimension, self.N)))
         self.state_noise = np.mat(q_ * randn(self.states_dimension, self.N))
         self.noise_r = r_
-        self.add_r = additional_noise
 
     # Generate noise lists.
-    def noise_init(self, repeat=1):
+    def noise_init(self, repeat=1, additional_noise=0):
         self.obs_noise = [np.mat(self.noise_r*randn(self.obs_dimension, self.N)
-                                 + self.add_r*randn(self.obs_dimension, self.N)) for _ in range(repeat)]
+                                 + additional_noise) for _ in range(repeat)]
         return self.obs_noise
 
     def states_init(self, X0):
@@ -162,7 +162,7 @@ class LinearSys():
 
 class NonlinearSys():
     # --------------------------------init---------------------------------- #
-    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, additional_noise=0):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
         self.func = Func()
         self.states_dimension = states_dimension
         self.obs_dimension = obs_dimension
@@ -174,12 +174,11 @@ class NonlinearSys():
         self.real_obs = np.mat(np.zeros((obs_dimension, self.N)))
         self.state_noise = np.mat(q_ * randn(self.states_dimension, self.N))
         self.noise_r = r_
-        self.add_r = additional_noise
 
     # Generate noise lists.
-    def noise_init(self, repeat=1):
+    def noise_init(self, repeat=1, additional_noise=0):
         self.obs_noise = [np.mat(self.noise_r*randn(self.obs_dimension, self.N)
-                                 + self.add_r*randn(self.obs_dimension, self.N)) for _ in range(repeat)]
+                                 + additional_noise) for _ in range(repeat)]
         return self.obs_noise
 
     def states_init(self, X0):
@@ -324,15 +323,17 @@ class Ukf(Filter):
 
 # Fixed Point Iteration
 class Mckf1(Filter):
-    def __init__(self):
-        Filter.__init__(self)
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, sigma, eps):
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
+        self.mc_init(sigma, eps)
 
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        H = self.H
-        x_prior = self.F * x_previous
-        P = self.F * P * self.F.T + self.noise_Q
+        F = self.func.state_matrix(x_previous, self.Ts)
+        x_prior = F * x_previous
+        P = F * P * F.T + self.noise_Q
+        H = self.func.obs_matrix(x_prior)
         # posterior
         P_sqrt = cholesky(P)
         R_sqrt = cholesky(self.noise_R)
@@ -431,7 +432,7 @@ class Ekf(Filter):
 class Mcekf(Filter):
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, sigma, eps=0):
         Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
-        self.mc_init(sigma, eps)
+        self.mc_init(sigma)
 
     # Calculate Jacobian matrix, for EKF. I think this is a correct version
     # compared the calculate by hand one in <functions>.
@@ -457,8 +458,12 @@ class Mcekf(Filter):
         # posterior
         L = self.kernel_G(np.linalg.norm((sensor_data - H*x_prior))*inv(self.noise_R)) / \
             self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*inv(P))
+        if math.isnan(L):
+            print("hit")
         K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - self.func.observation_func(x_prior))
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.noise_R*K.T
+        if math.isinf(np.linalg.norm(P_posterior)):
+            print("hit")
         return x_posterior, P_posterior, 0

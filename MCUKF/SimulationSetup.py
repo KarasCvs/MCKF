@@ -4,6 +4,7 @@ from filters import Mckf2 as Mckf
 from filters import Ekf as Ekf
 from filters import Mcekf as Mcekf
 from filters import NonlinearSys as Sys
+import numpy as np
 
 
 def sim_run(repeat_, sigma_=2, **kwargs):
@@ -22,18 +23,21 @@ def sim_run(repeat_, sigma_=2, **kwargs):
     kappa = 0
     # noise
     q = 0
-    r = 22
-    add_r = 95
-    # additional_noise = add_r*np.random.randn(obs_dimension, N)
-
+    r = 30
+    # additional noise
+    additional_noise = 20*np.random.randn(obs_dimension, int(t/Ts))
+    for i in range(additional_noise.shape[1]):
+        if np.random.randint(0, 100) < 5:
+            additional_noise[:, i] = additional_noise[:, i]*np.random.randint(70, 90)
+    # additional_noise = np.zeros((obs_dimension, int(t/Ts)))
     # System initial
-    sys = Sys(states_dimension, obs_dimension, t, Ts, q, r, add_r)
+    sys = Sys(states_dimension, obs_dimension, t, Ts, q, r)
     sys.states_init([3e5, -2e4, 1e-3])
     time_line, states, real_obs = sys.run()
     # Filter initial values
     filter_init = ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
     # Initial noise lists.
-    obs_noise = sys.noise_init(repeat)
+    obs_noise = sys.noise_init(repeat, additional_noise)
 
     print("Simulation started.")
 
@@ -92,14 +96,15 @@ def sim_run(repeat_, sigma_=2, **kwargs):
     print("Simulation done.")
 
     # Build a data set
-    description = "Non-Gaussian2."
+    description = "Non-Gaussian test."
     data_summarizes = {
                     'description': description,
                     'states dimension': states_dimension, 'obs dimension': states_dimension,
-                    'repeat': repeat, 'time': t, 'ts': Ts, 'q': q, 'r': r, 'add noise': add_r,
+                    'repeat': repeat, 'time': t, 'ts': Ts, 'q': q, 'r': r,
                     'time line': time_line.tolist(),
                     'states': {'system states': states.tolist()},
-                    'observations': {'noise_free observation': real_obs.tolist()},
+                    'noises': {'obs noise': obs_noise[0].tolist(), 'add noise': additional_noise.tolist()},
+                    'observations': {'noise_free observation': real_obs.tolist(), 'noise observation': (real_obs+obs_noise[0]).tolist()},
                     'mse': {}, 'mse1': {}, 'parameters': {}, 'run time': {}
                     }
     if "ukf_states_mean" in locals().keys():
