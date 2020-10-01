@@ -1,8 +1,11 @@
+# Every class with "1" mark means fixed-point iteration method. Without, means Dan.S's method
 from filters import Mcukf as Mcukf
 from filters import Ukf as Ukf
 from filters import Mckf2 as Mckf
+from filters import Mckf1 as Mckf1
 from filters import Ekf as Ekf
-from filters import Mcekf as Mcekf
+from filters import Mcekf2 as Mcekf
+from filters import Mcekf1 as Mcekf1
 from filters import NonlinearSys as Sys
 import numpy as np
 
@@ -23,11 +26,11 @@ def sim_run(repeat_, sigma_=2, **kwargs):
     kappa = 0
     # noise
     q = 0
-    r = 30
+    r = 20
     # additional noise
     additional_noise = 20*np.random.randn(obs_dimension, int(t/Ts))
     for i in range(additional_noise.shape[1]):
-        if np.random.randint(0, 100) < 5:
+        if np.random.randint(0, 100) < 10:
             additional_noise[:, i] = additional_noise[:, i]*np.random.randint(70, 90)
     # additional_noise = np.zeros((obs_dimension, int(t/Ts)))
     # System initial
@@ -49,6 +52,15 @@ def sim_run(repeat_, sigma_=2, **kwargs):
             mckf_sim = Mckf(states_dimension, obs_dimension, t, Ts, q, r, sigma, eps)
             mckf_sim.read_data(states, real_obs)
             mckf_states_mean, mckf_MSE1, mckf_MSE, _, _ = mckf_sim.run(filter_init, obs_noise, repeat)
+    except KeyError:
+        pass
+
+    try:
+        if kwargs['mckf1']:
+            print('Mckf1 runing.')
+            mckf1_sim = Mckf1(states_dimension, obs_dimension, t, Ts, q, r, sigma, eps)
+            mckf1_sim.read_data(states, real_obs)
+            mckf1_states_mean, mckf1_MSE1, mckf1_MSE, _, _ = mckf1_sim.run(filter_init, obs_noise, repeat)
     except KeyError:
         pass
 
@@ -80,6 +92,14 @@ def sim_run(repeat_, sigma_=2, **kwargs):
             mcekf_sim = Mcekf(states_dimension, obs_dimension, t, Ts, q, r, sigma)
             mcekf_sim.read_data(states, real_obs)
             mcekf_states_mean, mcekf_MSE1, mcekf_MSE, _, _ = mcekf_sim.run(filter_init, obs_noise, repeat)
+    except KeyError:
+        pass
+    try:
+        if kwargs['mcekf1']:
+            print('Mcekf1 running.')
+            mcekf1_sim = Mcekf1(states_dimension, obs_dimension, t, Ts, q, r, sigma, eps)
+            mcekf1_sim.read_data(states, real_obs)
+            mcekf1_states_mean, mcekf1_MSE1, mcekf1_MSE, _, _ = mcekf1_sim.run(filter_init, obs_noise, repeat)
     except KeyError:
         pass
 
@@ -125,6 +145,12 @@ def sim_run(repeat_, sigma_=2, **kwargs):
         data_summarizes['mse']['mckf mse'] = mckf_MSE.tolist()
         data_summarizes['mse1']['mckf mse1'] = mckf_MSE1.tolist()
         data_summarizes['run time']['mckf run time'] = mckf_sim.run_time
+    if "mckf1_states_mean" in locals().keys():
+        data_summarizes['parameters']['mckf1 parameters'] = {'sigma': sigma, 'eps': eps}
+        data_summarizes['states']['mckf1 states'] = mckf1_states_mean.tolist()
+        data_summarizes['mse']['mckf1 mse'] = mckf1_MSE.tolist()
+        data_summarizes['mse1']['mckf1 mse1'] = mckf1_MSE1.tolist()
+        data_summarizes['run time']['mckf1 run time'] = mckf1_sim.run_time
     if "ekf_states_mean" in locals().keys():
         data_summarizes['states']['ekf states'] = ekf_states_mean.tolist()
         data_summarizes['mse']['ekf mse'] = ekf_MSE.tolist()
@@ -136,5 +162,10 @@ def sim_run(repeat_, sigma_=2, **kwargs):
         data_summarizes['mse']['mcekf mse'] = mcekf_MSE.tolist()
         data_summarizes['mse1']['mcekf mse1'] = mcekf_MSE1.tolist()
         data_summarizes['run time']['mcekf run time'] = mcekf_sim.run_time
-
+    if "mcekf1_states_mean" in locals().keys():
+        data_summarizes['parameters']['mcekf1 parameters'] = {'sigma': sigma, 'eps': eps}
+        data_summarizes['states']['mcekf1 states'] = mcekf1_states_mean.tolist()
+        data_summarizes['mse']['mcekf1 mse'] = mcekf1_MSE.tolist()
+        data_summarizes['mse1']['mcekf1 mse1'] = mcekf1_MSE1.tolist()
+        data_summarizes['run time']['mcekf1 run time'] = mcekf1_sim.run_time
     return data_summarizes

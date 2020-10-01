@@ -15,107 +15,6 @@ from functions import NonLinearFunc as Func
 import matplotlib.pyplot as plt
 
 
-class Filter():
-    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
-        self.func = Func()
-        self.states_dimension = states_dimension
-        self.obs_dimension = obs_dimension
-        self.t = t
-        self.Ts = Ts
-        self.N = int(self.t/self.Ts)
-        self.time_line = np.linspace(0, self.t, self.N)
-        self.states = np.mat(np.zeros((states_dimension, self.N)))
-        self.P = np.mat(np.identity(states_dimension))
-        self.mse1 = np.mat(np.zeros((states_dimension, self.N)))
-        self.noise_q = q_
-        self.noise_r = r_
-        self.states_dimension = states_dimension
-        self.obs_dimension = obs_dimension
-        self.noise_Q = self.noise_q**2 * np.identity(self.states_dimension)
-        self.noise_R = self.noise_r**2 * np.identity(self.obs_dimension)
-        self.F = self.func.state_func
-        self.H = self.func.observation_func
-
-    def states_init(self, init_parameters):
-        filter0, P0 = init_parameters
-        self.states[:, 0] = np.array(filter0).reshape(self.states_dimension, 1)
-        self.P = np.diag(P0)
-
-    def read_data(self, states, obs):
-        self.real_states = states
-        self.obs = obs
-
-    def MSE(self):
-        for i in range(1, self.N):
-            self.mse1[:, i] = self.real_states[:, i] - self.states[:, i]
-            self.mse1[:, i] = np.power(self.mse1[:, i], 2)
-        return self.mse1
-
-    def mc_init(self, sigma, eps=1e-6):
-        self.sigma = sigma
-        self.eps = eps
-
-    def kernel_G(self, x):
-        res = np.exp(-(pow(np.linalg.norm(x), 2)/(2*(self.sigma**2))))
-        if res < 1e-5:
-            res = 1e-5
-        return res
-
-    def ut_init(self, alpha=1e-3, beta=2, kappa=0):
-        self.alpha = alpha
-        self.beta = beta
-        self.kappa = kappa
-        # actually he just have use a constant as lambda, but this is apparently better.
-        # self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension   # No.2
-        self.lambda_ = self.states_dimension    # No.1
-        self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
-        self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
-                       0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
-        self.W_cov = self.W_mean               # No.1 and No.3
-        # self.W_cov[0] = self.W_cov[0] + (1-self.alpha*self.alpha+self.beta)   # No.2
-
-    def sigma_points(self, x_previous, P):
-        sigma_A_ = np.linalg.cholesky((self.c_) * P)
-        sigma_X_ = x_previous * np.ones((1, self.states_dimension))
-        X_sigmas = np.hstack((x_previous, sigma_X_+sigma_A_, sigma_X_-sigma_A_))
-        return X_sigmas
-
-    def ut(self, transfunc, ut_input, dimension, Noise_cov):
-        cols = ut_input.shape[1]
-        trans_mean = np.mat(np.zeros((dimension, 1)))
-        trans_points = np.mat(np.zeros((dimension, cols)))
-        for i in range(cols):
-            trans_points[:, i] = transfunc(ut_input[:, i], self.Ts, self.k)
-            trans_mean = trans_mean + self.W_mean[i] * trans_points[:, i]
-        trans_dev = trans_points - trans_mean*np.ones((1, cols))
-        trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T + Noise_cov
-        return trans_mean, trans_points, trans_cov, trans_dev
-
-    def run(self, init_parameters, obs_noise, repeat=1):
-        # --------------------------------main procedure---------------------------------- #
-        mc_count = 0
-        states_mean = 0
-        mse1 = 0
-        start = time.clock()
-        for j in range(repeat):
-            self.states_init(init_parameters)
-            for i in range(1, self.N):
-                self.states[:, i], self.P, count = \
-                    self.estimate(self.states[:, i-1],
-                                  self.obs[:, i]+obs_noise[j][:, i],
-                                  self.P, i)
-                mc_count += count
-            states_mean += self.states
-            mse1 += self.MSE()
-        end = time.clock()
-        states_mean /= repeat
-        mse1 /= repeat
-        mse = mse1.sum(axis=1)/self.N
-        mc_count /= self.N*repeat
-        self.run_time = end - start
-        return states_mean, mse1, mse, mc_count, self.time_line
-
-
 class LinearSys():
     # --------------------------------init---------------------------------- #
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
@@ -199,6 +98,107 @@ class NonlinearSys():
             plt.legend(loc='upper left')
             plt.title(f"States {i}")
         plt.show()
+
+
+class Filter():
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
+        self.func = Func()
+        self.states_dimension = states_dimension
+        self.obs_dimension = obs_dimension
+        self.t = t
+        self.Ts = Ts
+        self.N = int(self.t/self.Ts)
+        self.time_line = np.linspace(0, self.t, self.N)
+        self.states = np.mat(np.zeros((states_dimension, self.N)))
+        self.P = np.mat(np.identity(states_dimension))
+        self.mse1 = np.mat(np.zeros((states_dimension, self.N)))
+        self.noise_q = q_
+        self.noise_r = r_
+        self.states_dimension = states_dimension
+        self.obs_dimension = obs_dimension
+        self.noise_Q = self.noise_q**2 * np.identity(self.states_dimension)
+        self.noise_R = self.noise_r**2 * np.identity(self.obs_dimension)
+        self.F = self.func.state_func
+        self.H = self.func.observation_func
+
+    def states_init(self, init_parameters):
+        filter0, P0 = init_parameters
+        self.states[:, 0] = np.array(filter0).reshape(self.states_dimension, 1)
+        self.P = np.diag(P0)
+
+    def read_data(self, states, obs):
+        self.real_states = states
+        self.obs = obs
+
+    def MSE(self):
+        for i in range(1, self.N):
+            self.mse1[:, i] = self.real_states[:, i] - self.states[:, i]
+            self.mse1[:, i] = np.power(self.mse1[:, i], 2)
+        return self.mse1
+
+    def mc_init(self, sigma, eps=1e-6):
+        self.sigma = sigma
+        self.eps = eps
+
+    def kernel_G(self, x):
+        res = np.exp(-(pow(np.linalg.norm(x), 2)/(2*(self.sigma**2))))
+        if res == 0:
+            res = 1e-70
+        return res
+
+    def ut_init(self, alpha=1e-3, beta=2, kappa=0):
+        self.alpha = alpha
+        self.beta = beta
+        self.kappa = kappa
+        # actually he just have use a constant as lambda, but this is apparently better.
+        # self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension   # No.2
+        self.lambda_ = self.states_dimension    # No.1
+        self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
+        self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
+                       0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
+        self.W_cov = self.W_mean               # No.1 and No.3
+        # self.W_cov[0] = self.W_cov[0] + (1-self.alpha*self.alpha+self.beta)   # No.2
+
+    def sigma_points(self, x_previous, P):
+        sigma_A_ = np.linalg.cholesky((self.c_) * P)
+        sigma_X_ = x_previous * np.ones((1, self.states_dimension))
+        X_sigmas = np.hstack((x_previous, sigma_X_+sigma_A_, sigma_X_-sigma_A_))
+        return X_sigmas
+
+    def ut(self, transfunc, ut_input, dimension, Noise_cov):
+        cols = ut_input.shape[1]
+        trans_mean = np.mat(np.zeros((dimension, 1)))
+        trans_points = np.mat(np.zeros((dimension, cols)))
+        for i in range(cols):
+            trans_points[:, i] = transfunc(ut_input[:, i], self.Ts, self.k)
+            trans_mean = trans_mean + self.W_mean[i] * trans_points[:, i]
+        trans_dev = trans_points - trans_mean*np.ones((1, cols))
+        trans_cov = trans_dev*np.diag(self.W_cov)*trans_dev.T + Noise_cov
+        return trans_mean, trans_points, trans_cov, trans_dev
+
+    def run(self, init_parameters, obs_noise, repeat=1):
+        # --------------------------------main procedure---------------------------------- #
+        mc_count = 0
+        states_mean = 0
+        mse1 = 0
+        start = time.clock()
+        for j in range(repeat):
+            self.states_init(init_parameters)
+            for i in range(1, self.N):
+                self.states[:, i], self.P, count = \
+                    self.estimate(self.states[:, i-1],
+                                  self.obs[:, i]+obs_noise[j][:, i],
+                                  self.P, i)
+                mc_count += count
+            states_mean += self.states
+            mse1 += self.MSE()
+        end = time.clock()
+        states_mean /= repeat
+        mse1 /= repeat
+        mse = mse1.sum(axis=1)/self.N
+        mc_count /= self.N*repeat
+        self.run_time = end - start
+        return states_mean, mse1, mse, mc_count, self.time_line
 
 
 class Mcukf(Filter):
@@ -351,7 +351,7 @@ class Mckf1(Filter):
             P_mc = P_sqrt*inv(Cx)*P_sqrt
             R_mc = R_sqrt*inv(Cy)*R_sqrt
             K = P_sqrt*H.T*inv(H*P_mc*H.T+R_mc)
-            x_posterior = X_temp + K*(sensor_data - H*X_temp)
+            x_posterior = x_prior + K*(sensor_data - H*x_prior)
             Evaluation = np.linalg.norm(x_posterior - X_temp)/np.linalg.norm(X_temp)
             X_temp = x_posterior
             mc_count += 1
@@ -388,9 +388,9 @@ class Mckf2(Filter):
         P = F * P * F.T + self.noise_Q
         # posterior
         H = self.func.obs_matrix(x_prior)
-        L = self.kernel_G(np.linalg.norm((sensor_data - H*x_prior))*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*inv(P))
-        K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
+        L = self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*inv(P)) / \
+            self.kernel_G(np.linalg.norm((sensor_data - H*x_prior))*inv(self.noise_R))
+        K = inv(L*inv(P) + (H.T*inv(self.noise_R)*H))*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - H*x_prior)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.noise_R*K.T
@@ -429,7 +429,75 @@ class Ekf(Filter):
         return x_posterior, P_posterior, 0
 
 
-class Mcekf(Filter):
+# Fixed Point Iteration
+class Mcekf1(Filter):
+    def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, sigma, eps=0):
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
+        self.mc_init(sigma, eps)
+
+    # Calculate Jacobian matrix, for EKF. I think this is a correct version
+    # compared the calculate by hand one in <functions>.
+    def jacobian(self, function, length):
+        args = []
+        for i in range(length):
+            exec(f"x{i} = sy.symbols(f'x{i}')")
+            exec(f"args.append(x{i})")
+        variables = sy.Matrix(args)
+        function = sy.Matrix(function(args, self.Ts))
+        jacobian = function.jacobian(variables)
+        return jacobian
+
+    def estimate(self, x_previous, sensor_data, P, k):
+        # priori
+        self.k = k
+        x_prior = self.func.state_func(x_previous, self.Ts)
+        obs = self.func.observation_func(x_prior)
+        # Calculate jacobin
+        F = self.func.states_jacobian(x_previous, self.Ts)
+        H = self.func.obs_jacobian(x_prior)
+        # For time-variant system
+        P = F * P * F.T + self.noise_Q
+        # posterior
+        P_sqrt = cholesky(P)
+        R_sqrt = cholesky(self.noise_R)
+        B = np.hstack((np.vstack((P_sqrt, np.zeros((self.obs_dimension, self.states_dimension)))),
+                       np.vstack((np.zeros((self.states_dimension, self.obs_dimension)), R_sqrt))))
+        B_inv = inv(B)
+        W = B_inv*np.vstack((np.identity(self.states_dimension), H))
+        D = B_inv*np.vstack((x_prior, sensor_data))
+        X_temp = x_prior
+        Evaluation = 1
+        mc_count = 0
+        while Evaluation > self.eps:
+            E = D - W*X_temp
+            Cx, Cy = self.mc(E)
+            P_mc = P_sqrt*inv(Cx)*P_sqrt
+            R_mc = R_sqrt*inv(Cy)*R_sqrt
+            K = P_sqrt*H.T*inv(H*P_mc*H.T+R_mc)
+            x_posterior = x_prior + K*(sensor_data - obs)
+            Evaluation = np.linalg.norm(x_posterior - X_temp)/np.linalg.norm(X_temp)
+            X_temp = x_posterior
+            mc_count += 1
+        P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
+            + K*self.noise_R*K.T
+        return x_posterior, P_posterior, mc_count
+
+    def mc(self, E):
+        entropy_x = np.zeros(self.states_dimension)
+        entropy_y = np.zeros(self.obs_dimension)
+        for i in range(self.states_dimension):
+            entropy_x[i] = self.kernel_G(E[i])
+            if entropy_x[i] < 1e-9:
+                entropy_x[i] = 1e-9
+        for i in range(self.obs_dimension):
+            entropy_y[i] = self.kernel_G(E[i+self.states_dimension])
+            if entropy_y[i] < 1e-9:
+                entropy_y[i] = 1e-9
+        return np.diag(entropy_x), np.diag(entropy_y)
+
+
+# Dan.S's method
+class Mcekf2(Filter):
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, sigma, eps=0):
         Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
         self.mc_init(sigma)
@@ -450,20 +518,16 @@ class Mcekf(Filter):
         # priori
         self.k = k
         x_prior = self.func.state_func(x_previous, self.Ts)
+        obs = self.func.observation_func(x_prior)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
         H = self.func.obs_jacobian(x_prior)
-        # For time-variant system
         P = F * P * F.T + self.noise_Q
         # posterior
-        L = self.kernel_G(np.linalg.norm((sensor_data - H*x_prior))*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*inv(P))
-        if math.isnan(L):
-            print("hit")
+        L = self.kernel_G(np.linalg.norm((sensor_data - obs))*inv(self.noise_R)) / \
+            self.kernel_G(np.linalg.norm((x_prior - self.func.state_func(x_previous, self.Ts)))*inv(P))
         K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
-        x_posterior = x_prior + K*(sensor_data - self.func.observation_func(x_prior))
+        x_posterior = x_prior + K*(sensor_data - obs)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.noise_R*K.T
-        if math.isinf(np.linalg.norm(P_posterior)):
-            print("hit")
         return x_posterior, P_posterior, 0
