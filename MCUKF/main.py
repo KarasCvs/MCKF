@@ -4,14 +4,14 @@ import winsound
 
 mg = Manager()
 repeat = 50
-sigmas = [6]
+sigmas = [2, 4, 6, 10]
 sim = Sim(repeat)
 sim.sys_run()
 for sigma in sigmas:
-    data = sim.filter_run(sigma, ukf=1, ekf=1, mcekf=1, mcekf1=0)
+    data = sim.filter_run(sigma, ukf=1, ekf=1, mcekf=1)
     mg.view_data(data)
     # print(mg.states['mcekf states'])
-    # mg.save_data(data)
+    mg.save_data(data)
     print(f'sigma = {sigma}')
     mg.plot_all()
 winsound.Beep(1000, 1000)

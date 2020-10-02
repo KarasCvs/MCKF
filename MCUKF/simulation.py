@@ -21,13 +21,13 @@ class Simulation():
         self.Ts = 0.1
         # noise
         self.q = 0
-        self.r = 100
+        self.r = 20
         # additional noise
         self.additional_noise = 20*np.random.randn(self.obs_dimension, int(self.t/self.Ts))
         for i in range(self.additional_noise.shape[1]):
             if np.random.randint(0, 100) < 10:
                 self.additional_noise[:, i] = self.additional_noise[:, i]*np.random.randint(70, 90)
-        self.additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
+        # self.additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
 
     def sys_run(self):
         # System initial
