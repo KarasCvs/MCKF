@@ -150,9 +150,9 @@ class Filter():
         self.alpha = alpha
         self.beta = beta
         self.kappa = kappa
-        # actually he just have use a constant as lambda, but this is apparently better.
+        # lambda can be calculated by No.2 or just let it to be a const as No.1
         # self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension   # No.2
-        self.lambda_ = self.states_dimension    # No.1
+        self.lambda_ = 2    # No.1
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
         self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
                        0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
