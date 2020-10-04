@@ -27,7 +27,7 @@ class Simulation():
         for i in range(self.additional_noise.shape[1]):
             if np.random.randint(0, 100) < 10:
                 self.additional_noise[:, i] = self.additional_noise[:, i]*np.random.randint(70, 90)
-        # self.additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
+        self.additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
 
     def sys_run(self):
         # System initial
@@ -44,7 +44,7 @@ class Simulation():
         # UKF part
         self.alpha = 1e-3
         self.beta = 2
-        self.kappa = 0
+        self.kappa = 1
         print("Simulation started.")
         # Filter initial values
         filter_init = ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
@@ -124,49 +124,49 @@ class Simulation():
                         'states dimension': self.states_dimension, 'obs dimension': self.states_dimension,
                         'repeat': self.repeat, 'time': self.t, 'ts': self.Ts, 'q': self.q, 'r': self.r,
                         'time line': self.time_line.tolist(),
-                        'states': {'system self.states': self.states.tolist()},
+                        'states': {'system states': self.states.tolist()},
                         'noises': {'obs noise': self.obs_noise[0].tolist(), 'add noise': self.additional_noise.tolist()},
                         'observations': {'noise_free observation': self.real_obs.tolist(), 'noise observation': (self.real_obs+self.obs_noise[0]).tolist()},
                         'mse': {}, 'mse1': {}, 'parameters': {}, 'run time': {}
                         }
         if "ukf_states_mean" in locals().keys():
-            data_summarizes['states']['ukf self.states'] = ukf_states_mean.tolist()
+            data_summarizes['states']['ukf states'] = ukf_states_mean.tolist()
             data_summarizes['mse']['ukf mse'] = ukf_MSE.tolist()
             data_summarizes['mse1']['ukf mse1'] = ukf_MSE1.tolist()
             data_summarizes['parameters']['ukf parameters'] = {'alpha': self.alpha, 'beta': self.beta, 'kappa': self.kappa}
             data_summarizes['run time']['ukf run time'] = ukf_sim.run_time
         if "mcukf_states_mean" in locals().keys():
-            data_summarizes['states']['mcukf self.states'] = mcukf_states_mean.tolist()
+            data_summarizes['states']['mcukf states'] = mcukf_states_mean.tolist()
             data_summarizes['mse']['mcukf mse'] = mcukf_MSE.tolist()
             data_summarizes['mse1']['mcukf mse1'] = mcukf_MSE1.tolist()
             data_summarizes['parameters']['mcukf parameters'] = {'alpha': self.alpha, 'beta': self.beta, 'kappa': self.kappa, 'sigma': self.sigma, 'eps': self.eps}
             data_summarizes['run time']['mcukf run time'] = mcukf_sim.run_time
         if "mckf_states_mean" in locals().keys():
             data_summarizes['parameters']['mckf parameters'] = {'sigma': self.sigma, 'eps': self.eps}
-            data_summarizes['states']['mckf self.states'] = mckf_states_mean.tolist()
+            data_summarizes['states']['mckf states'] = mckf_states_mean.tolist()
             data_summarizes['mse']['mckf mse'] = mckf_MSE.tolist()
             data_summarizes['mse1']['mckf mse1'] = mckf_MSE1.tolist()
             data_summarizes['run time']['mckf run time'] = mckf_sim.run_time
         if "mckf1_states_mean" in locals().keys():
             data_summarizes['parameters']['mckf1 parameters'] = {'sigma': self.sigma, 'eps': self.eps}
-            data_summarizes['states']['mckf1 self.states'] = mckf1_states_mean.tolist()
+            data_summarizes['states']['mckf1 states'] = mckf1_states_mean.tolist()
             data_summarizes['mse']['mckf1 mse'] = mckf1_MSE.tolist()
             data_summarizes['mse1']['mckf1 mse1'] = mckf1_MSE1.tolist()
             data_summarizes['run time']['mckf1 run time'] = mckf1_sim.run_time
         if "ekf_states_mean" in locals().keys():
-            data_summarizes['states']['ekf self.states'] = ekf_states_mean.tolist()
+            data_summarizes['states']['ekf states'] = ekf_states_mean.tolist()
             data_summarizes['mse']['ekf mse'] = ekf_MSE.tolist()
             data_summarizes['mse1']['ekf mse1'] = ekf_MSE1.tolist()
             data_summarizes['run time']['ekf run time'] = ekf_sim.run_time
         if "mcekf_states_mean" in locals().keys():
             data_summarizes['parameters']['mcekf parameters'] = {'sigma': self.sigma, 'eps': self.eps}
-            data_summarizes['states']['mcekf self.states'] = mcekf_states_mean.tolist()
+            data_summarizes['states']['mcekf states'] = mcekf_states_mean.tolist()
             data_summarizes['mse']['mcekf mse'] = mcekf_MSE.tolist()
             data_summarizes['mse1']['mcekf mse1'] = mcekf_MSE1.tolist()
             data_summarizes['run time']['mcekf run time'] = mcekf_sim.run_time
         if "mcekf1_states_mean" in locals().keys():
             data_summarizes['parameters']['mcekf1 parameters'] = {'sigma': self.sigma, 'eps': self.eps}
-            data_summarizes['states']['mcekf1 self.states'] = mcekf1_states_mean.tolist()
+            data_summarizes['states']['mcekf1 states'] = mcekf1_states_mean.tolist()
             data_summarizes['mse']['mcekf1 mse'] = mcekf1_MSE.tolist()
             data_summarizes['mse1']['mcekf1 mse1'] = mcekf1_MSE1.tolist()
             data_summarizes['run time']['mcekf1 run time'] = mcekf1_sim.run_time

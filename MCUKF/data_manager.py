@@ -55,7 +55,7 @@ class Manager():
 
     def read_data(self, filename=None):
         if filename is None:
-            filename = 'LastSimulation.json'
+            filename = 'LastSimulation'
         with open(os.path.join(self.path, filename+'.json'), 'r') as f:
             json_data = f.read()
             data = json.loads(json_data)

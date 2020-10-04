@@ -3,8 +3,8 @@ from data_manager import Manager
 import winsound
 
 mg = Manager()
-repeat = 50
-sigmas = [2, 4, 6, 10]
+repeat = 1
+sigmas = [4]
 sim = Sim(repeat)
 sim.sys_run()
 for sigma in sigmas:
@@ -14,8 +14,8 @@ for sigma in sigmas:
     mg.save_data(data)
     print(f'sigma = {sigma}')
     mg.plot_all()
-winsound.Beep(1000, 1000)
-mg.show()
+winsound.Beep(1000, 300)
+# mg.show()
 
 # keywords = {"description": "Non-Gaussian."}
 # targets = mg.locate(keywords)

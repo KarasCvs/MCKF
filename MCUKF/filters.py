@@ -116,8 +116,8 @@ class Filter():
         self.noise_r = r_
         self.states_dimension = states_dimension
         self.obs_dimension = obs_dimension
-        self.noise_Q = self.noise_q**2 * np.identity(self.states_dimension)
-        self.noise_R = self.noise_r**2 * np.identity(self.obs_dimension)
+        self.noise_Q = self.noise_q**2 * np.ones((self.states_dimension, 1))
+        self.noise_R = self.noise_r**2 * np.ones((self.obs_dimension, 1))
         self.F = self.func.state_func
         self.H = self.func.observation_func
 
@@ -152,7 +152,7 @@ class Filter():
         self.kappa = kappa
         # lambda can be calculated by No.2 or just let it to be a const as No.1
         # self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension   # No.2
-        self.lambda_ = 2    # No.1
+        self.lambda_ = 20    # No.1
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
         self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
                        0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
@@ -517,7 +517,7 @@ class Mcekf2(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts) + self.noise_Q
         obs = self.func.observation_func(x_prior)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
