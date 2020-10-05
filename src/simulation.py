@@ -13,7 +13,7 @@ import numpy as np
 class Simulation():
     def __init__(self, repeat_):
         # system part
-        self.description = "Gaussian test."
+        self.description = "non-Gaussian test."
         self.states_dimension = 3
         self.obs_dimension = 1
         self.repeat = repeat_
@@ -23,10 +23,10 @@ class Simulation():
         self.q = 0
         self.r = 20
         # additional noise
-        self.additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))  # 20*np.random.randn(self.obs_dimension, int(self.t/self.Ts))
+        self.additional_noise = np.random.randn(self.obs_dimension, int(self.t/self.Ts))
         for i in range(self.additional_noise.shape[1]):
-            if np.random.randint(0, 100) < 30:
-                self.additional_noise[:, i] = np.ones((self.obs_dimension, 1)) * np.random.randint(70, 90)
+            if np.random.randint(0, 100) < 20:
+                self.additional_noise[:, i] = self.additional_noise[:, i] * np.random.randint(100, 200)
         # self.additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
 
     def sys_run(self):

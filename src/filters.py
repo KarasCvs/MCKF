@@ -143,7 +143,7 @@ class Filter():
     def kernel_G(self, x):
         res = np.exp(-(pow(np.linalg.norm(x), 2)/(2*(self.sigma**2))))
         if res == 0:
-            res = 1e-70
+            res = 1e-7
         return res
 
     def ut_init(self, alpha=1e-3, beta=2, kappa=0):
@@ -526,7 +526,7 @@ class Mcekf2(Filter):
         # posterior
         # The calculation of L, denominator should be the error of states which can be instead with Q.
         L = self.kernel_G(np.linalg.norm((sensor_data - obs))*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm((self.noise_Q))*inv(P))  # x_prior - self.func.state_func(x_previous, self.Ts)
+            self.kernel_G(np.linalg.norm((x_prior - self.func.state_func(x_previous, self.Ts)))*inv(P))  # x_prior - self.func.state_func(x_previous, self.Ts)
         K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - obs)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \

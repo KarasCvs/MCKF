@@ -104,7 +104,7 @@ class Manager():
     def plot(self, target, filename=None):
         data = np.array(self.find(target, filename))
         for i in range(data.shape[0]):
-            plt.plot(self.time_line, data.reshape(data.shape[1]))
+            plt.plot(self.time_line, data.reshape(data.shape[1]), label=target)
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title(target)
