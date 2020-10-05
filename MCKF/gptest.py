@@ -28,7 +28,7 @@ gp.fit(train_x, train_y)
 y_pred, sigma = gp.predict(timeline, return_std=True)
 
 plt.figure()
-plt.plot(timeline, states, label='real')
+plt.plot(timeline, states, label='real', color='r')
 plt.plot(timeline, y_pred, 'b-', label=u'Prediction')
 # plt.fill(np.concatenate([timeline, timeline[::-1]]),
 #          np.concatenate([y_pred - 1.9600 * sigma,

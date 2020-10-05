@@ -113,25 +113,37 @@ class Manager():
         plt.show()
 
     # find in dict. 这个应该改成递归.
-    def find(self, key, filename=None):
+    # def find(self, key, filename=None):
+    #     key = key.lower()
+    #     for i in self.data:
+    #         try:
+    #             if i == key:
+    #                 return self.data[i]
+    #             if type(self.data[i]) is dict:
+    #                 for j in self.data[i]:
+    #                     if type(self.data[i][j]) is dict:
+    #                         for n in self.data[i][j]:
+    #                             if n == key:
+    #                                 return self.data[i][j][n]
+    #                     if j == key:
+    #                         return self.data[i][j]
+    #             else:
+    #                 if i == key:
+    #                     return self.data[i]
+    #         except KeyError:
+    #             print("Can't find key.\n")
+
+    def find(self, key, filename=None, data=None):
         key = key.lower()
-        for i in self.data:
-            try:
-                if i == key:
-                    return self.data[i]
-                if type(self.data[i]) is dict:
-                    for j in self.data[i]:
-                        if type(self.data[i][j]) is dict:
-                            for n in self.data[i][j]:
-                                if n == key:
-                                    return self.data[i][j][n]
-                        if j == key:
-                            return self.data[i][j]
-                else:
-                    if i == key:
-                        return self.data[i]
-            except KeyError:
-                print("Can't find key.\n")
+        if data is None:
+            data = self.data
+        for i in data:
+            if i == key:
+                return data[i]
+            if type(data[i]) is dict:
+                value = self.find(key, filename, data[i])
+                if value is not None:
+                    return value
 
     # locate in files.
     def locate(self, keywords):
