@@ -81,8 +81,10 @@ class Manager():
 
     def plot_obs(self):
         plt.figure()
-        for i in self.observations:
-            plt.plot(self.time_line, np.array(self.observations[i]).reshape(self.N,), linewidth=1, linestyle="-", label=i)
+        for i in range(self.obs_dimension):
+            plt.subplot(100*self.obs_dimension+11+i)
+            for j in self.observations:
+                plt.plot(self.time_line, np.array(self.observations[j])[i].reshape(self.N,), linewidth=1, linestyle="-", label=j)
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title("Observation")

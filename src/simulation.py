@@ -13,7 +13,7 @@ import numpy as np
 class Simulation():
     def __init__(self, repeat_):
         # system part
-        self.description = "non-Gaussian test."
+        self.description = "non-Gaussian impulse, rocket simulation"
         self.states_dimension = 3
         self.obs_dimension = 1
         self.repeat = repeat_
@@ -22,20 +22,30 @@ class Simulation():
         # noise
         self.q = 0
         self.r = 20
+
         # additional noise
-        self.additional_noise = np.random.randn(self.obs_dimension, int(self.t/self.Ts))
-        for i in range(self.additional_noise.shape[1]):
-            if np.random.randint(0, 100) < 20:
-                self.additional_noise[:, i] = self.additional_noise[:, i] * np.random.randint(100, 200)
-        # self.additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
+        self.additional_noise = []
+        for _ in range(self.repeat):
+            additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
+            for i in range(int(self.t/self.Ts)):
+                if np.random.randint(0, 100) < 5:
+                    additional_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(500, 700)
+            self.additional_noise.append(additional_noise)
+
+        # self.additional_noise = [20*np.random.randn(self.obs_dimension, int(self.t/self.Ts)) for _ in range(self.repeat)]
+        # self.additional_noise = [np.zeros((self.obs_dimension, int(self.t/self.Ts))) for _ in range(self.repeat)]
 
     def sys_run(self):
         # System initial
         sys = Sys(self.states_dimension, self.obs_dimension, self.t, self.Ts, self.q, self.r)
+        # Rocket system
         sys.states_init([3e5, -2e4, 1e-3])
+        # Robot movement
+        # sys.states_init([2, 1, 5, 3, 5, 12])
         self.time_line, self.states, self.real_obs = sys.run()
         # Initial noise lists.
         self.obs_noise = sys.noise_init(self.repeat, self.additional_noise)
+        # sys.plot()
 
     def filter_run(self, sigma_=2, **kwargs):
         # MCUKF part
@@ -44,10 +54,13 @@ class Simulation():
         # UKF part
         self.alpha = 1e-3
         self.beta = 2
-        self.kappa = 1
+        self.kappa = 3
         print("Simulation started.")
         # Filter initial values
+        # Rocket system
         filter_init = ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
+        # Robot movement
+        # filter_init = ([0, 0, 2, 0, 0, 2], [1, 1, 5, 1, 1, 10])
         # Mckf part
         # Mckf initial, order: x dimension, y dimension, run time, time space, self.sigma, self.eps
         try:
@@ -121,11 +134,11 @@ class Simulation():
         # Build a data set
         data_summarizes = {
                         'description': self.description,
-                        'states dimension': self.states_dimension, 'obs dimension': self.states_dimension,
+                        'states dimension': self.states_dimension, 'obs dimension': self.obs_dimension,
                         'repeat': self.repeat, 'time': self.t, 'ts': self.Ts, 'q': self.q, 'r': self.r,
                         'time line': self.time_line.tolist(),
                         'states': {'system states': self.states.tolist()},
-                        'noises': {'obs noise': self.obs_noise[0].tolist(), 'add noise': self.additional_noise.tolist()},
+                        'noises': {'obs noise': self.obs_noise[0].tolist(), 'add noise': self.additional_noise[0].tolist()},
                         'observations': {'noise_free observation': self.real_obs.tolist(), 'noise observation': (self.real_obs+self.obs_noise[0]).tolist()},
                         'mse': {}, 'mse1': {}, 'parameters': {}, 'run time': {}
                         }

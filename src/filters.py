@@ -6,7 +6,6 @@
 # with W_m. That mean W_m(0) will not be specialization, this is work able but still, not
 # stable enough.
 import time
-import math
 import sympy as sy
 import numpy as np
 from numpy.random import randn
@@ -77,7 +76,7 @@ class NonlinearSys():
     # Generate noise lists.
     def noise_init(self, repeat=1, additional_noise=0):
         self.obs_noise = [np.mat(self.noise_r*randn(self.obs_dimension, self.N)
-                                 + additional_noise) for _ in range(repeat)]
+                                 + additional_noise[i]) for i in range(repeat)]
         return self.obs_noise
 
     def states_init(self, X0):
@@ -112,12 +111,12 @@ class Filter():
         self.states = np.mat(np.zeros((states_dimension, self.N)))
         self.P = np.mat(np.identity(states_dimension))
         self.mse1 = np.mat(np.zeros((states_dimension, self.N)))
-        self.noise_q = q_
-        self.noise_r = r_
+        self.noise_q = q_*np.ones((self.states_dimension, 1))
+        self.noise_r = r_*np.ones((self.obs_dimension, 1))
         self.states_dimension = states_dimension
         self.obs_dimension = obs_dimension
-        self.noise_Q = self.noise_q**2 * np.ones((self.states_dimension, 1))
-        self.noise_R = self.noise_r**2 * np.ones((self.obs_dimension, 1))
+        self.noise_Q = self.noise_q**2 * np.diag(np.ones((self.states_dimension)))
+        self.noise_R = self.noise_r**2 * np.diag(np.ones((self.obs_dimension)))
         self.F = self.func.state_func
         self.H = self.func.observation_func
 
@@ -151,16 +150,21 @@ class Filter():
         self.beta = beta
         self.kappa = kappa
         # lambda can be calculated by No.2 or just let it to be a const as No.1
-        # self.lambda_ = self.alpha*self.alpha*(self.states_dimension+self.kappa) - self.states_dimension   # No.2
-        self.lambda_ = 20    # No.1
+        # self.lambda_ = self.alpha**2*(self.states_dimension+self.kappa) - self.states_dimension   # No.2
+        self.lambda_ = 6   # No.1
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
         self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
-                       0.5/self.c_+np.zeros((1, 2*self.states_dimension))))).A.reshape(self.states_dimension*2+1,)
+                       1/(2*self.c_) + np.zeros((1, 2*self.states_dimension))
+                       ))).A.reshape(self.states_dimension*2+1,)
+        # self.W_mean = (np.hstack(((np.matrix(1-self.states_dimension-self.alpha**2*self.kappa)),
+        #                1/(2*(self.alpha**2*self.kappa)) + np.zeros((1, 2*self.states_dimension))
+        #                ))).A.reshape(self.states_dimension*2+1,)
         self.W_cov = self.W_mean               # No.1 and No.3
-        # self.W_cov[0] = self.W_cov[0] + (1-self.alpha*self.alpha+self.beta)   # No.2
+        # self.W_cov[0] = self.W_mean[0] + (1-self.alpha**2+self.beta)   # No.2
 
     def sigma_points(self, x_previous, P):
         sigma_A_ = np.linalg.cholesky((self.c_) * P)
+        # sigma_A_ = self.alpha*self.kappa*np.linalg.cholesky(P)
         sigma_X_ = x_previous * np.ones((1, self.states_dimension))
         X_sigmas = np.hstack((x_previous, sigma_X_+sigma_A_, sigma_X_-sigma_A_))
         return X_sigmas
@@ -331,7 +335,7 @@ class Mckf1(Filter):
         # priori
         self.k = k
         F = self.func.state_matrix(x_previous, self.Ts)
-        x_prior = F * x_previous
+        x_prior = F * x_previous + self.noise_q*randn(self.states_dimension, 1)
         P = F * P * F.T + self.noise_Q
         H = self.func.obs_matrix(x_prior)
         # posterior
@@ -383,7 +387,7 @@ class Mckf2(Filter):
         # priori
         self.k = k
         F = self.func.state_matrix(x_previous, self.Ts)
-        x_prior = F * x_previous
+        x_prior = F * x_previous + self.noise_q*randn(self.states_dimension, 1)
         # For time-variant system
         P = F * P * F.T + self.noise_Q
         # posterior
@@ -416,7 +420,7 @@ class Ekf(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts) + self.noise_q*randn(self.states_dimension, 1)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
         H = self.func.obs_jacobian(x_prior)
@@ -450,7 +454,7 @@ class Mcekf1(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts) + self.noise_q*randn(self.states_dimension, 1)
         obs = self.func.observation_func(x_prior)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
@@ -517,7 +521,7 @@ class Mcekf2(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts) + self.noise_Q
+        x_prior = self.func.state_func(x_previous, self.Ts) + self.noise_q*randn(self.states_dimension, 1)
         obs = self.func.observation_func(x_prior)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
@@ -525,8 +529,8 @@ class Mcekf2(Filter):
         P = F * P * F.T + self.noise_Q
         # posterior
         # The calculation of L, denominator should be the error of states which can be instead with Q.
-        L = self.kernel_G(np.linalg.norm((sensor_data - obs))*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm((x_prior - self.func.state_func(x_previous, self.Ts)))*inv(P))  # x_prior - self.func.state_func(x_previous, self.Ts)
+        L = self.kernel_G(np.linalg.norm(sensor_data - obs)*inv(self.noise_R)) / \
+            self.kernel_G(np.linalg.norm(x_prior - self.func.state_func(x_previous, self.Ts))*inv(P))  # x_prior - self.func.state_func(x_previous, self.Ts)
         K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - obs)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
