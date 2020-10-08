@@ -11,6 +11,7 @@ import numpy as np
 from numpy.random import randn
 from numpy.linalg import inv, cholesky
 from functions import NonLinearFunc as Func
+# from functions import MoveSim as Func
 import matplotlib.pyplot as plt
 
 
@@ -140,9 +141,9 @@ class Filter():
         self.eps = eps
 
     def kernel_G(self, x):
-        res = np.exp(-(pow(np.linalg.norm(x), 2)/(2*(self.sigma**2))))
-        if res == 0:
-            res = 1e-7
+        res = np.exp(-(np.linalg.norm(x)/(2*(self.sigma**2))))
+        if res < 1e-4:
+            res = 1e-4
         return res
 
     def ut_init(self, alpha=1e-3, beta=2, kappa=0):
@@ -335,7 +336,7 @@ class Mckf1(Filter):
         # priori
         self.k = k
         F = self.func.state_matrix(x_previous, self.Ts)
-        x_prior = F * x_previous + self.noise_q*randn(self.states_dimension, 1)
+        x_prior = F * x_previous
         P = F * P * F.T + self.noise_Q
         H = self.func.obs_matrix(x_prior)
         # posterior
@@ -387,7 +388,7 @@ class Mckf2(Filter):
         # priori
         self.k = k
         F = self.func.state_matrix(x_previous, self.Ts)
-        x_prior = F * x_previous + self.noise_q*randn(self.states_dimension, 1)
+        x_prior = F * x_previous
         # For time-variant system
         P = F * P * F.T + self.noise_Q
         # posterior
@@ -420,7 +421,7 @@ class Ekf(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts) + self.noise_q*randn(self.states_dimension, 1)
+        x_prior = self.func.state_func(x_previous, self.Ts)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
         H = self.func.obs_jacobian(x_prior)
@@ -454,7 +455,7 @@ class Mcekf1(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts) + self.noise_q*randn(self.states_dimension, 1)
+        x_prior = self.func.state_func(x_previous, self.Ts)
         obs = self.func.observation_func(x_prior)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
@@ -521,7 +522,7 @@ class Mcekf2(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts) + self.noise_q*randn(self.states_dimension, 1)
+        x_prior = self.func.state_func(x_previous, self.Ts)
         obs = self.func.observation_func(x_prior)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
@@ -529,8 +530,8 @@ class Mcekf2(Filter):
         P = F * P * F.T + self.noise_Q
         # posterior
         # The calculation of L, denominator should be the error of states which can be instead with Q.
-        L = self.kernel_G(np.linalg.norm(sensor_data - obs)*inv(self.noise_R)) / \
-            self.kernel_G(np.linalg.norm(x_prior - self.func.state_func(x_previous, self.Ts))*inv(P))  # x_prior - self.func.state_func(x_previous, self.Ts)
+        L = self.kernel_G(np.linalg.norm(sensor_data - obs)*inv(cholesky(self.noise_R))) / \
+            self.kernel_G(np.linalg.norm(F*self.noise_q)*inv(cholesky(P)))  # x_prior - self.func.state_func(x_previous, self.Ts)
         K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - obs)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \

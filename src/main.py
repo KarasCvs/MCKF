@@ -3,14 +3,14 @@ from data_manager import Manager
 import winsound
 
 mg = Manager()
-repeat = 50
-sigmas = [2, 4, 6, 10]
+repeat = 10
+sigmas = [2, 10]
 sim = Sim(repeat)
 sim.sys_run()
 for sigma in sigmas:
-    data = sim.filter_run(sigma, ukf=1, ekf=1, mcekf=1)
+    data = sim.filter_run(sigma, ukf=0, ekf=1, mcekf=1)
     mg.view_data(data)
-    mg.save_data(data)
+    # mg.save_data(data)
     print(f'sigma = {sigma}')
     mg.plot_all()
 winsound.Beep(300, 300)
