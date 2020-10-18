@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import re
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -56,7 +57,12 @@ class Manager():
     def read_data(self, filename=None):
         if filename is None:
             filename = 'LastSimulation'
-        with open(os.path.join(self.path, filename+'.json'), 'r') as f:
+        try:
+            if not re.search('.json', filename):
+                filename = filename + '.json'
+        except:
+            print("File name error.")
+        with open(os.path.join(self.path, filename), 'r') as f:
             json_data = f.read()
             data = json.loads(json_data)
         self.view_data(data)
@@ -103,37 +109,18 @@ class Manager():
         for i in self.mse:
             print(f'{i}=\n{self.mse[i]}\n')
 
-    def plot(self, target, filename=None):
-        data = np.array(self.find(target, filename))
-        for i in range(data.shape[0]):
-            plt.plot(self.time_line, data.reshape(data.shape[1]), label=target)
-            plt.grid(True)
-            plt.legend(loc='upper left')
-            plt.title(target)
+    # # Plot anything that input as data.
+    # def plot(self, data_list, parametes, filename=None):
+    #     for i in range(data_list):
+    #         for i in range(data_list[i].shape[0]):
+    #             plt.figure()
+    #             plt.plot(self.time_line, data.reshape(data_list[i].shape[1]), label=target)
+    #             plt.grid(True)
+    #             plt.legend(loc='upper left')
+    #             plt.title(target)
 
     def show(self):
         plt.show()
-
-    # find in dict. 这个应该改成递归.
-    # def find(self, key, filename=None):
-    #     key = key.lower()
-    #     for i in self.data:
-    #         try:
-    #             if i == key:
-    #                 return self.data[i]
-    #             if type(self.data[i]) is dict:
-    #                 for j in self.data[i]:
-    #                     if type(self.data[i][j]) is dict:
-    #                         for n in self.data[i][j]:
-    #                             if n == key:
-    #                                 return self.data[i][j][n]
-    #                     if j == key:
-    #                         return self.data[i][j]
-    #             else:
-    #                 if i == key:
-    #                     return self.data[i]
-    #         except KeyError:
-    #             print("Can't find key.\n")
 
     def find(self, key, filename=None, data=None):
         key = key.lower()
@@ -153,10 +140,11 @@ class Manager():
         fitted_list = []
         for filename in filenames:
             fit = True
+            self.read_data(filename)
             for key in keywords:
                 value = self.find(key, filename)
                 fit &= (value == keywords[key])
-            if fit:
+            if fit and filename != "LastSimulation.json":
                 fitted_list.append(filename)
         if fitted_list:
             print(f"Find fitted files {fitted_list}")

@@ -3,8 +3,8 @@ from data_manager import Manager
 import winsound
 
 mg = Manager()
-repeat = 10
-sigmas = [2, 10]
+repeat = 100
+sigmas = [2]
 sim = Sim(repeat)
 sim.sys_run()
 for sigma in sigmas:
