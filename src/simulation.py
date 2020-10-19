@@ -17,23 +17,23 @@ class Simulation():
         self.states_dimension = 3
         self.obs_dimension = 1
         self.repeat = repeat_
-        self.t = 50
+        self.t = 30
         self.Ts = 0.1
         # noise
-        self.q = np.array((1e-15, 1e-15, 0)).reshape(self.states_dimension, 1)
+        self.q = 0  # np.array((1e-15, 1e-15, 0)).reshape(self.states_dimension, 1)
         # np.array((1, 3, 1e-4, 2, 1, 1e-5)).reshape(self.states_dimension, 1)
         # np.array((1e-2, 1e-3, 0)).reshape(self.states_dimension, 1)
-        self.r = 20
+        self.r = 100
 
         # additional noise
         self.additional_noise = [np.zeros((self.obs_dimension, int(self.t/self.Ts))) for _ in range(self.repeat)]
-        self.additional_noise = []
-        for _ in range(self.repeat):
-            additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
-            for i in range(int(self.t/self.Ts)):
-                if np.random.randint(0, 100) < 5:
-                    additional_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(500, 700)
-            self.additional_noise.append(additional_noise)
+        # self.additional_noise = []
+        # for _ in range(self.repeat):
+        #     additional_noise = np.zeros((self.obs_dimension, int(self.t/self.Ts)))
+        #     for i in range(int(self.t/self.Ts)):
+        #         if np.random.randint(0, 100) < 5:
+        #             additional_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(500, 700)
+        #     self.additional_noise.append(additional_noise)
 
         # self.additional_noise = [20*np.random.randn(self.obs_dimension, int(self.t/self.Ts)) for _ in range(self.repeat)]
 

@@ -142,8 +142,8 @@ class Filter():
 
     def kernel_G(self, x):
         res = np.exp(-(np.linalg.norm(x)/(2*(self.sigma**2))))
-        if res < 1e-4:
-            res = 1e-4
+        if res < 1e-6:
+            res = 1e-6
         return res
 
     def ut_init(self, alpha=1e-3, beta=2, kappa=0):
@@ -152,7 +152,7 @@ class Filter():
         self.kappa = kappa
         # lambda can be calculated by No.2 or just let it to be a const as No.1
         # self.lambda_ = self.alpha**2*(self.states_dimension+self.kappa) - self.states_dimension   # No.2
-        self.lambda_ = 6   # No.1
+        self.lambda_ = 3   # No.1
         self.c_ = self.lambda_ + self.states_dimension                                      # scaling factor
         self.W_mean = (np.hstack(((np.matrix(self.lambda_/self.c_)),
                        1/(2*self.c_) + np.zeros((1, 2*self.states_dimension))
