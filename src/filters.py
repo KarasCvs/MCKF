@@ -531,7 +531,7 @@ class Mcekf2(Filter):
         # posterior
         # The calculation of L, denominator should be the error of states which can be instead with Q.
         L = self.kernel_G(np.linalg.norm(sensor_data - obs)*inv(cholesky(self.noise_R))) / \
-            self.kernel_G(np.linalg.norm(F*self.noise_q)*inv(cholesky(P)))  # x_prior - self.func.state_func(x_previous, self.Ts)
+            self.kernel_G(np.linalg.norm(self.noise_q)*inv(cholesky(P)))  # x_prior - self.func.state_func(x_previous, self.Ts)
         K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - obs)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
