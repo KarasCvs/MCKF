@@ -6,7 +6,7 @@ import numpy as np
 m_count = []
 score = []
 score_dic = {}
-with open('./logs/slam_gmapping-2-stdout.log', 'r') as file:
+with open('./SLAM_data_reader/logs/slam_gmapping-2-stdout.log', 'r') as file:
     lines = file.readlines()
     for line in lines:
         count_match = re.match(r'(m_count)(\s)(\d*)', line)
@@ -15,8 +15,8 @@ with open('./logs/slam_gmapping-2-stdout.log', 'r') as file:
         score_match = re.match(r'(Average Scan Matching Score=)(\d*\.\d*)', line)
         if score_match:
             score.append(score_match.group(2))
-    score_dic['m_count'] = [float(i) for i in m_count]
-    score_dic['score'] = [float(i) for i in score]
+    score_dic['mcekf m_count'] = [float(i) for i in m_count]
+    score_dic['mcekf score'] = [float(i) for i in score]
     with open('./log_data/score.json', 'w') as f:
         json_str = json.dumps(score_dic)
         f.write(json_str)
@@ -24,7 +24,7 @@ with open('./logs/slam_gmapping-2-stdout.log', 'r') as file:
 
 covariances = []
 cov_norm = []
-with open('./logs/mcekf_localization-1-stdout.log', 'r') as file:
+with open('./SLAM_data_reader/logs/mcekf_localization-1-stdout.log', 'r') as file:
     covariance = ''
     lines = file.readlines()
     for line in lines:
@@ -48,6 +48,6 @@ for i in range(len(covariances)):
     covariances[i] = np.array(covariances[i]).reshape(15, 15)
     cov_norm.append(np.linalg.norm(covariances[i]))
 
-with open('./log_data/cov.json', 'w') as f:
-    json_str = json.dumps({'cov_norm': cov_norm})
+with open('./SLAM_data_reader/log_data/cov.json', 'w') as f:
+    json_str = json.dumps({'mcekf cov_norm': cov_norm})
     f.write(json_str)
