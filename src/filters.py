@@ -291,19 +291,6 @@ class Mcukf2(Filter):
             + K*self.noise_R*K.T
         return x_posterior, P_posterior, 0
 
-    def mc(self, E):
-        entropy_x = np.zeros(self.states_dimension)
-        entropy_y = np.zeros(self.obs_dimension)
-        for i in range(self.states_dimension):
-            entropy_x[i] = self.kernel_G(E[i])
-            if entropy_x[i] < 1e-9:
-                entropy_x[i] = 1e-9
-        for i in range(self.obs_dimension):
-            entropy_y[i] = self.kernel_G(E[i+self.states_dimension])
-            if entropy_y[i] < 1e-9:
-                entropy_y[i] = 1e-9
-        return np.diag(entropy_x), np.diag(entropy_y)
-
 
 class Ukf(Filter):
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, alpha, beta, kappa):
@@ -394,7 +381,7 @@ class Mckf2(Filter):
         # posterior
         H = self.func.obs_matrix(x_prior)
         L = self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*inv(P)) / \
-            self.kernel_G(np.linalg.norm((sensor_data - H*x_prior))*inv(self.noise_R))
+            self.kernel_G(np.linalg.norm(self.noise_q)*inv(self.noise_R))
         K = inv(L*inv(P) + (H.T*inv(self.noise_R)*H))*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - H*x_prior)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
