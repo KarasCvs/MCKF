@@ -6,7 +6,6 @@
 # with W_m. That mean W_m(0) will not be specialization, this is work able but still, not
 # stable enough.
 import time
-import sympy as sy
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import inv, cholesky
@@ -137,14 +136,38 @@ class Filter():
         return self.mse1
 
     def mc_init(self, sigma, eps=1e-6):
-        self.sigma = sigma
+        self.sigma_square = sigma ** 2
         self.eps = eps
 
-    def kernel_G(self, x):
-        res = np.exp(-(np.linalg.norm(x)/(2*(self.sigma**2))))
+#   可变bandwidth MCC
+    def shift_sigma(self, e, u, sigma_alpha=0.9):
+        sigma_X = np.log((e**2-5)/(np.linalg.norm(u)**2*e**2))    # 为什么要考虑步长? 先不考虑试试. 暂时试着用常数代替噪音方差, 回头记得改回来.
+        sigma_main = -e**2/(2*np.log(sigma_X))      # 如何对矩阵求对数? 如果e是矩阵那么sigma_X自然也是矩阵. 按照论文, 噪音也应当是矩阵.
+        if 0 < sigma_main and sigma_main < 1:
+            sigma_temp = sigma_alpha * self.sigma_square + (1-sigma_alpha)*min(sigma_main, self.sigma_square)
+            self.sigma_square = sigma_temp
+        else:
+            pass
+
+    def kernel_G(self, e, u=0):
+        self.shift_sigma(e, u)
+        res = np.exp(-(np.linalg.norm(e)/(2*(self.sigma_square))))
         if res < 1e-6:
             res = 1e-6
         return res
+
+    def mc(self, E, u=0):
+        entropy_x = np.zeros(self.states_dimension)
+        entropy_y = np.zeros(self.obs_dimension)
+        for i in range(self.states_dimension):
+            entropy_x[i] = self.kernel_G(E[i], u)
+            if entropy_x[i] < 1e-9:
+                entropy_x[i] = 1e-9
+        for i in range(self.obs_dimension):
+            entropy_y[i] = self.kernel_G(E[i+self.states_dimension], u)
+            if entropy_y[i] < 1e-9:
+                entropy_y[i] = 1e-9
+        return np.diag(entropy_x), np.diag(entropy_y)
 
     def ut_init(self, alpha=1e-3, beta=2, kappa=0):
         self.alpha = alpha
@@ -237,7 +260,7 @@ class Mcukf(Filter):
         x_old_mc = x_init_mc
         while Evaluation > self.eps:
             E_mc = D_mc - W_mc*x_old_mc
-            Cx_mc, Cy_mc = self.mc(E_mc)
+            Cx_mc, Cy_mc = self.mc(E_mc, x_old_mc)
             P_mc = Sp_mc*np.linalg.inv(Cx_mc)*Sp_mc.T
             R_mc = Sr_mc*np.linalg.inv(Cy_mc)*Sr_mc.T
             K = P_mc*H_mc.T*np.linalg.inv(H_mc*P_mc*H_mc.T+R_mc)
@@ -249,19 +272,6 @@ class Mcukf(Filter):
         P_posterior = (np.eye(self.states_dimension)-K*H_mc)*P_xx*(np.eye(self.states_dimension)-K*H_mc).T \
             + K*self.noise_R*K.T
         return x_posterior, P_posterior, count
-
-    def mc(self, E):
-        entropy_x = np.zeros(self.states_dimension)
-        entropy_y = np.zeros(self.obs_dimension)
-        for i in range(self.states_dimension):
-            entropy_x[i] = self.kernel_G(E[i])
-            if entropy_x[i] < 1e-9:
-                entropy_x[i] = 1e-9
-        for i in range(self.obs_dimension):
-            entropy_y[i] = self.kernel_G(E[i+self.states_dimension])
-            if entropy_y[i] < 1e-9:
-                entropy_y[i] = 1e-9
-        return np.diag(entropy_x), np.diag(entropy_y)
 
 
 # This is a version that I'm trying to use Dan.S's method on Ukf.
@@ -339,7 +349,7 @@ class Mckf1(Filter):
         mc_count = 0
         while Evaluation > self.eps:
             E = D - W*X_temp
-            Cx, Cy = self.mc(E)
+            Cx, Cy = self.mc(E, X_temp)
             P_mc = P_sqrt*inv(Cx)*P_sqrt
             R_mc = R_sqrt*inv(Cy)*R_sqrt
             K = P_sqrt*H.T*inv(H*P_mc*H.T+R_mc)
@@ -350,19 +360,6 @@ class Mckf1(Filter):
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.noise_R*K.T
         return x_posterior, P_posterior, mc_count
-
-    def mc(self, E):
-        entropy_x = np.zeros(self.states_dimension)
-        entropy_y = np.zeros(self.obs_dimension)
-        for i in range(self.states_dimension):
-            entropy_x[i] = self.kernel_G(E[i])
-            if entropy_x[i] < 1e-9:
-                entropy_x[i] = 1e-9
-        for i in range(self.obs_dimension):
-            entropy_y[i] = self.kernel_G(E[i+self.states_dimension])
-            if entropy_y[i] < 1e-9:
-                entropy_y[i] = 1e-9
-        return np.diag(entropy_x), np.diag(entropy_y)
 
 
 # Dan.S method, this works.
@@ -393,18 +390,6 @@ class Ekf(Filter):
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_):
         Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
 
-    # Calculate Jacobian matrix, for EKF. I think this is a correct version
-    # compared the calculate by hand one in <functions>.
-    def jacobian(self, function, length):
-        args = []
-        for i in range(length):
-            exec(f"x{i} = sy.symbols(f'x{i}')")
-            exec(f"args.append(x{i})")
-        variables = sy.Matrix(args)
-        function = sy.Matrix(function(args, self.Ts))
-        jacobian = function.jacobian(variables)
-        return jacobian
-
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
@@ -426,18 +411,6 @@ class Mcekf1(Filter):
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, sigma, eps=0):
         Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
         self.mc_init(sigma, eps)
-
-    # Calculate Jacobian matrix, for EKF. I think this is a correct version
-    # compared the calculate by hand one in <functions>.
-    def jacobian(self, function, length):
-        args = []
-        for i in range(length):
-            exec(f"x{i} = sy.symbols(f'x{i}')")
-            exec(f"args.append(x{i})")
-        variables = sy.Matrix(args)
-        function = sy.Matrix(function(args, self.Ts))
-        jacobian = function.jacobian(variables)
-        return jacobian
 
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
@@ -462,7 +435,7 @@ class Mcekf1(Filter):
         mc_count = 0
         while Evaluation > self.eps:
             E = D - W*X_temp
-            Cx, Cy = self.mc(E)
+            Cx, Cy = self.mc(E, X_temp)
             P_mc = P_sqrt*inv(Cx)*P_sqrt
             R_mc = R_sqrt*inv(Cy)*R_sqrt
             K = P_sqrt*H.T*inv(H*P_mc*H.T+R_mc)
@@ -474,37 +447,12 @@ class Mcekf1(Filter):
             + K*self.noise_R*K.T
         return x_posterior, P_posterior, mc_count
 
-    def mc(self, E):
-        entropy_x = np.zeros(self.states_dimension)
-        entropy_y = np.zeros(self.obs_dimension)
-        for i in range(self.states_dimension):
-            entropy_x[i] = self.kernel_G(E[i])
-            if entropy_x[i] < 1e-9:
-                entropy_x[i] = 1e-9
-        for i in range(self.obs_dimension):
-            entropy_y[i] = self.kernel_G(E[i+self.states_dimension])
-            if entropy_y[i] < 1e-9:
-                entropy_y[i] = 1e-9
-        return np.diag(entropy_x), np.diag(entropy_y)
-
 
 # Dan.S's method
 class Mcekf2(Filter):
     def __init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, sigma, eps=0):
         Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_)
         self.mc_init(sigma)
-
-    # Calculate Jacobian matrix, for EKF. I think this is a correct version
-    # compared the calculate by hand one in <functions>.
-    def jacobian(self, function, length):
-        args = []
-        for i in range(length):
-            exec(f"x{i} = sy.symbols(f'x{i}')")
-            exec(f"args.append(x{i})")
-        variables = sy.Matrix(args)
-        function = sy.Matrix(function(args, self.Ts))
-        jacobian = function.jacobian(variables)
-        return jacobian
 
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
@@ -517,7 +465,7 @@ class Mcekf2(Filter):
         P = F * P * F.T + self.noise_Q
         # posterior
         # The calculation of L, denominator should be the error of states which can be instead with Q.
-        L = self.kernel_G(np.linalg.norm(sensor_data - obs)*inv(cholesky(self.noise_R))) / \
+        L = self.kernel_G(np.linalg.norm(sensor_data - obs)*inv(cholesky(self.noise_R)), x_prior) / \
             self.kernel_G(np.linalg.norm(self.noise_q)*inv(cholesky(P)))  # x_prior - self.func.state_func(x_previous, self.Ts)
         K = inv(inv(P) + (L*H.T*inv(self.noise_R)*H))*L*H.T*inv(self.noise_R)
         x_posterior = x_prior + K*(sensor_data - obs)

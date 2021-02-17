@@ -3,7 +3,8 @@ from data_manager import Manager
 import winsound
 
 mg = Manager()
-repeat = 30
+
+repeat = 2
 sigmas = [2, 4, 6, 10]
 sim = Sim(repeat)
 sim.sys_run()
@@ -16,8 +17,9 @@ for sigma in sigmas:
 winsound.Beep(300, 300)
 mg.show()
 
-# keywords = {"description": "Non-Gaussian."}
+# keywords = {"description": "Gaussian test"}
 # targets = mg.locate(keywords)
 # for i in targets:
 #     print(i)
 #     print(mg.find("sigma", i), mg.find("MSE", i))
+mg.show()

@@ -39,15 +39,6 @@ class NonLinearFunc():
         observation = math.sqrt(1e5*1e5 + (states[0]-1e5) ** 2)
         return observation
 
-    # Linear
-    # def state_func(self, states, Ts, k=0):
-    #     states_ = self.F*states
-    #     return states_
-
-    # def observation_func(self, states, Ts=0, k=0):
-    #     observation = self.H*states
-    #     return observation
-
     def state_matrix(self, states, Ts=0, k=0):
         self.F = np.matrix(([0, 1, 0], [0, float(2*math.exp(-states[0]/2e4) * states[1] * states[2]/2 - 32.2/states[1]), 0], [0, 0, 0]))
         self.F = np.eye(states.shape[0]) + Ts*self.F

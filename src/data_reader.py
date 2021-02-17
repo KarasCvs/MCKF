@@ -1,5 +1,4 @@
 from data_manager import Manager
-import matplotlib.pyplot as plt
 
 
 mg = Manager()

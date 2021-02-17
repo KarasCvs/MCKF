@@ -36,8 +36,6 @@ class Simulation():
                     additional_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(500, 700)
             self.additional_noise.append(additional_noise)
 
-        # self.additional_noise = [20*np.random.randn(self.obs_dimension, int(self.t/self.Ts)) for _ in range(self.repeat)]
-
     def sys_run(self):
         # System initial
         sys = Sys(self.states_dimension, self.obs_dimension, self.t, self.Ts, self.q, self.r)
@@ -62,10 +60,6 @@ class Simulation():
         # Filter initial values
         # Rocket system
         filter_init = ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
-        # Robot movement
-        # filter_init = ([0, 0, 2, 0, 0, 2], [1, 1, 5, 1, 1, 10])
-        # Mckf part
-        # Mckf initial, order: x dimension, y dimension, run time, time space, self.sigma, self.eps
         try:
             if kwargs['mckf']:
                 print('Mckf runing.')
