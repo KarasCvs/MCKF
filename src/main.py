@@ -4,18 +4,17 @@ import winsound
 
 mg = Manager()
 
-repeat = 2
-sigmas = [2, 4, 6, 10]
+repeat = 20
+sigmas = [3]
 sim = Sim(repeat)
 sim.sys_run()
 for sigma in sigmas:
-    data = sim.filter_run(sigma, ukf=1, ekf=1, mcekf=1, mcukf=1)
+    data = sim.filter_run(sigma, mcekf=1, imcekf=1)
     mg.view_data(data)
     mg.save_data(data)
     print(f'sigma = {sigma}')
-    mg.plot_all()
+    mg.plot_mse1()
 winsound.Beep(300, 300)
-mg.show()
 
 # keywords = {"description": "Gaussian test"}
 # targets = mg.locate(keywords)
