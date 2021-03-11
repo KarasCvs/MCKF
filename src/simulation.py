@@ -2,9 +2,9 @@
 from filters import MCUKF1 as MCUKF
 from filters import UKF as UKF
 from filters import EKF as EKF
-# from filters import MCEKF2 as MCEKF
+from filters import MCEKF2 as MCEKF
 from filters import IMCEKF as IMCEKF
-from filters import MCEKF1 as MCEKF
+# from filters import MCEKF1 as MCEKF
 from filters import NonlinearSys as Sys
 import numpy as np
 
@@ -20,7 +20,7 @@ class Simulation():
         self.Ts = 0.1
         self.N = int(self.t/self.Ts)
         # noise
-        self.q = np.diag([5, 0.2, 0])
+        self.q = np.diag([5, 5, 0])
         # np.array((1, 3, 1e-4, 2, 1, 1e-5)).reshape(self.states_dimension, 1)
         # np.array((1e-2, 1e-3, 0)).reshape(self.states_dimension, 1)
         self.r = 20        # 20 for non-Gaussian
@@ -33,15 +33,15 @@ class Simulation():
                 if np.random.randint(0, 100) < 5:
                     additional_sys_noise[:, i] = np.dot(
                                                         np.random.choice((-1, 1), 3) * np.diag([1, 1, 0]),
-                                                        np.random.randint(100, 200, size=(self.states_dimension, 1)))
+                                                        np.random.randint(20, 30, size=(self.states_dimension, 1)))
             self.additional_sys_noise.append(additional_sys_noise)
 
         self.additional_obs_noise = []
         for _ in range(self.repeat):
             additional_obs_noise = np.zeros((self.obs_dimension, self.N))
             for i in range(self.N):
-                if np.random.randint(0, 100) < 5:
-                    additional_obs_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(500, 700)
+                if np.random.randint(0, 100) < 10:
+                    additional_obs_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(100, 300)
             self.additional_obs_noise.append(additional_obs_noise)
         # self.additional_obs_noise = np.zeros(self.repeat)
         # self.additional_sys_noise = np.zeros(self.repeat)
@@ -59,7 +59,7 @@ class Simulation():
     def filter_run(self, sigma_=2, **kwargs):
         # MCUKF part
         self.sigma = sigma_
-        self.eps = 1e-6
+        self.eps = 1e-8
         # UKF part
         self.alpha = 1e-3
         self.beta = 2

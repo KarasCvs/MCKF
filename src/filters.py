@@ -174,9 +174,9 @@ class Filter():
 
     def kernel_G(self, e, u=0):
         # self.shift_sigma(e, u)
-        res = np.exp(-(np.linalg.norm(e) / (2 * (self.sigma_square))))
-        if res < 1e-6:
-            res = 1e-6
+        res = np.exp(-(np.linalg.norm(e)**2 / (2 * (self.sigma_square))))
+        if res < 1e-8:
+            res = 1e-8
         return res
 
     def mc(self, E, u=0):
@@ -305,7 +305,7 @@ class IMCEKF(Filter):
         # priori
         self.k = k
         x_prior = self.func.state_func(x_previous, self.Ts)
-        obs = self.func.observation_func(x_prior)
+        # obs = self.func.observation_func(x_prior)
         # Calculate jacobin
         F = self.func.states_jacobian(x_previous, self.Ts)
         H = self.func.obs_jacobian(x_prior)
@@ -315,10 +315,10 @@ class IMCEKF(Filter):
         x_posterior_temp = x_prior
         evaluation = 1
         while evaluation > self.eps:
-            L = self.kernel_G(np.linalg.norm(sensor_data - obs)*inv(self.cov_R)) / \
+            L = self.kernel_G(inv(self.cov_R)*(sensor_data - self.func.observation_func(x_posterior_temp))) / \
                 self.kernel_G(inv(P)*(x_posterior_temp - x_prior))
             K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
-            x_posterior = x_prior + K * (sensor_data - obs)
+            x_posterior = x_prior + K * (sensor_data - self.func.observation_func(x_posterior_temp))
             evaluation = (np.linalg.norm(x_posterior)-np.linalg.norm(x_posterior_temp))/np.linalg.norm(x_posterior_temp)
             x_posterior_temp = x_posterior
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
