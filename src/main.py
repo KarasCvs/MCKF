@@ -5,14 +5,14 @@ import winsound
 mg = Manager()
 
 repeat = 20
-sigmas = [2, 10]
+sigmas = [2, 4, 6, 10]
 sim = Sim(repeat)
 sim.sys_run()
 for sigma in sigmas:
-    data = sim.filter_run(sigma, mcekf=1, imcekf=1, ekf=1)
+    print(f'sigma = {sigma}')
+    data = sim.filter_run(sigma, mcekf=1, imcekf=0, ekf=1, imcekf2=1)
     mg.view_data(data)
     # mg.save_data(data)
-    print(f'sigma = {sigma}')
     mg.plot_mse()
     mg.plot_mse1()
     mg.plot_states()

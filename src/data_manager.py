@@ -49,8 +49,8 @@ class Manager():
         self.time_line = np.array(data['time line'])
         self.states = data['states']
         self.observations = data['observations']
-        self.mse1 = data['mse1']
         self.mse = data['mse']
+        self.ta_mse = data['ta_mse']
         self.states = data['states']
         self.run_time = data['run time']
 
@@ -99,15 +99,15 @@ class Manager():
         plt.figure()
         for i in range(self.states_dimension):
             plt.subplot(100*self.states_dimension+11+i)
-            for j in self.mse1:
-                plt.plot(self.time_line, np.array(self.mse1[j])[i, :].reshape(self.N,), linewidth=1, linestyle="-", label=j)
+            for j in self.mse:
+                plt.plot(self.time_line, np.array(self.mse[j])[i, :].reshape(self.N,), linewidth=1, linestyle="-", label=j)
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title(f"MSE of state{i}")
 
     def plot_mse(self):
-        for i in self.mse:
-            print(f'{i}=\n{self.mse[i]}\n')
+        for i in self.ta_mse:
+            print(f'{i}=\n{self.ta_mse[i]}\n')
 
     # # Plot anything that input as data.
     # def plot(self, data_list, parametes, filename=None):
