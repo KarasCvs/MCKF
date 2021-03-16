@@ -63,6 +63,52 @@ class NonLinearFunc():
         return obs_jacobian
 
 
+class NonLinearFunc2():
+    def __init__(self):
+        pass
+
+    def state_func(self, states, Ts, k=0):
+        states_ = np.zeros(1).reshape(1, 1)
+        states_[0] = 0.5 * states[0] + (25 * states[0])/(1 + states[0]**2) + 8 * math.cos(1.2*k)
+        return states_
+
+    def observation_func(self, states, Ts=0, k=0):
+        observation = 0.05 * states[0]**2
+        return observation
+
+    def states_jacobian(self, states, Ts):
+        states_jacobian = 0.5 + 25*((1-states[0]**2)/(1+states[0]**2)**2)
+        return states_jacobian
+
+    def obs_jacobian(self, states, Ts=0):
+        x0 = float(states[0])
+        obs_jacobian = np.matrix([0.1*x0])
+        return obs_jacobian
+
+
+class NonLinearFunc3():
+    def __init__(self):
+        pass
+
+    def state_func(self, states, Ts, k=0):
+        states_ = np.zeros(1).reshape(1, 1)
+        states_[0] = states[0] + 3*math.cos((states[0]/10))
+        return states_
+
+    def observation_func(self, states, Ts=0, k=0):
+        observation = states[0] ** 3
+        return observation
+
+    def states_jacobian(self, states, Ts):
+        states_jacobian = 1 - 3*math.sin((states[0]/10))
+        return states_jacobian
+
+    def obs_jacobian(self, states, Ts=0):
+        states[0]
+        obs_jacobian = 3*(states[0]**2)
+        return obs_jacobian
+
+
 class MoveSim():
     def __init__(self):
         self.r = 5

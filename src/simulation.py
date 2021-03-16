@@ -4,7 +4,7 @@ from filters import UKF as UKF
 from filters import EKF as EKF
 from filters import MCEKF2 as MCEKF
 from filters import IMCEKF as IMCEKF
-from filters import IMCEKF2 as IMCEKF2
+from filters import IMCEKF3 as IMCEKF3
 # from filters import MCEKF1 as MCEKF
 from filters import NonlinearSys as Sys
 import numpy as np
@@ -14,25 +14,40 @@ class Simulation():
     def __init__(self, repeat_):
         # --------------------------------- System parameters --------------------------------- #
         self.description = "non-Gaussian impulse, rocket simulation"
-        self.states_dimension = 3
+        self.states_dimension = 1
         self.obs_dimension = 1
         self.repeat = repeat_
         self.t = 30
         self.Ts = 0.1
         self.N = int(self.t/self.Ts)
         # noise
-        self.q = np.diag([1, 1e-2, 0])
-        self.r = 20        # 20 for non-Gaussian
+        self.q = np.diag([2])
+        self.r = 2                # 20 for non-Gaussian
+        # Filter parameters
+        self.q_filter = np.diag([5])
+        self.r_filter = 10         # 20 for non-Gaussian
+        # MCUKF part
+        self.eps = 1e-8
+        # UKF part
+        self.alpha = 1e-3
+        self.beta = 2
+        self.kappa = 3
+        # System initial values
+        self.sys_init = [10]
+        # self.sys_init = ([3e5, -2e4, 1e-3])
+        # Filter initial values
+        self.filter_init = ([11], [1])
+        # self.filter_init = ([3e5, -2e4, 9e-4], [1e2, 4e2, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
         # --------------------------------------------------------------------------------- #
         # --------------------------------- Impulse noise --------------------------------- #
         self.additional_sys_noise = []
         for _ in range(self.repeat):
             additional_sys_noise = np.asmatrix(np.zeros((self.states_dimension, self.N)))
             for i in range(self.N):
-                if np.random.randint(0, 100) < 2:
+                if np.random.randint(0, 100) < 10:
                     additional_sys_noise[:, i] = np.dot(
-                                                        np.random.choice((-1, 1), 3) * np.diag([1, 1, 0]),
-                                                        np.random.randint(30, 50, size=(self.states_dimension, 1)))
+                                                        np.random.choice((-1, 1), 1) * np.diag([1]),
+                                                        np.random.randint(500, 800, size=(self.states_dimension, 1)))
             self.additional_sys_noise.append(additional_sys_noise)
         self.additional_obs_noise = []
         for _ in range(self.repeat):
@@ -41,8 +56,8 @@ class Simulation():
                 if np.random.randint(0, 100) < 5:
                     additional_obs_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(200, 400)
             self.additional_obs_noise.append(additional_obs_noise)
-        # self.additional_sys_noise = np.zeros(self.repeat)
-        # self.additional_obs_noise = np.zeros(self.repeat)
+        self.additional_sys_noise = np.zeros(self.repeat)
+        self.additional_obs_noise = np.zeros(self.repeat)
 
         # --------------------------------------------------------------------------------- #
 
@@ -53,7 +68,7 @@ class Simulation():
         # Initial noise lists.
         self.obs_noise, self.sys_noise = sys.noise_init(self.additional_sys_noise, self.additional_obs_noise)
         # Rocket system initiation
-        sys.states_init([3e5, -2e4, 1e-3])
+        sys.states_init(self.sys_init)
         self.time_line, self.states, self.real_obs, self.sensor = sys.run()
         # Define dataset
         self.data_summarizes = {
@@ -70,20 +85,13 @@ class Simulation():
 # --------------------------------------------------------------------------------- #
 
     def filter_run(self, sigma_=2, **kwargs):
-        # --------------------------------- Filter parameters --------------------------------- #
-        # MCUKF part
         self.sigma = sigma_
-        self.eps = 1e-5
-        # UKF part
-        self.alpha = 1e-3
-        self.beta = 2
-        self.kappa = 3
+        filter_init = self.filter_init
+        # --------------------------------- Filter parameters --------------------------------- #
         print("Simulation started.")
-        # Filter initial values
         # Rocket system
-        filter_init = ([3e5, -2e4, 9e-4], [1e2, 4e2, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
         self.parameters = (self.states_dimension, self.obs_dimension, self.t, self.Ts,
-                           self.q, self.r, self.alpha, self.beta, self.kappa, self.sigma, self.eps,
+                           self.q_filter, self.r_filter, self.alpha, self.beta, self.kappa, self.sigma, self.eps,
                            self.data_summarizes, self.repeat)
         # --------------------------------------------------------------------------------- #
 
@@ -97,7 +105,7 @@ class Simulation():
             pass
 
         # UKF part
-        # UKF initial, order: x dimension, y dimension, run time, time space, self.q, self.r, α, β, self.kappa
+        # UKF initial, order: x dimension, y dimension, run time, time space, self.q_filter, self.r_filter, α, β, self.kappa
         try:
             if kwargs['ukf']:
                 ukf_sim = UKF(self.parameters)
@@ -114,9 +122,9 @@ class Simulation():
             pass
         # IMCEKF2 part
         try:
-            if kwargs['imcekf2']:
-                imcekf2_sim = IMCEKF2(self.parameters)
-                self.data_summarizes = imcekf2_sim.run(filter_init, self.states, self.sensor)
+            if kwargs['imcekf3']:
+                imcekf3_sim = IMCEKF3(self.parameters)
+                self.data_summarizes = imcekf3_sim.run(filter_init, self.states, self.sensor, 1)
         except KeyError:
             pass
 
@@ -129,7 +137,7 @@ class Simulation():
             pass
 
         # MCUKF part
-        # MCUKF initial, order: x dimension, y dimension, run time, time space, self.q, self.r, α, β, self.kappa, self.sigma, self.eps
+        # MCUKF initial, order: x dimension, y dimension, run time, time space, self.q_filter, self.r_filter, α, β, self.kappa, self.sigma, self.eps
         try:
             if kwargs['mcukf']:
                 mcukf_sim = MCUKF(self.parameters)
