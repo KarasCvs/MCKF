@@ -14,18 +14,16 @@ class Simulation():
     def __init__(self, repeat_):
         # --------------------------------- System parameters --------------------------------- #
         self.description = "non-Gaussian impulse, rocket simulation"
-        self.states_dimension = 1
-        self.obs_dimension = 1
         self.repeat = repeat_
         self.t = 30
         self.Ts = 0.1
         self.N = int(self.t/self.Ts)
         # noise
-        self.q = np.diag([2])
-        self.r = 2                # 20 for non-Gaussian
+        self.q = np.diag([0, 0, 0])
+        self.r = 20                # 20 for non-Gaussian
         # Filter parameters
-        self.q_filter = np.diag([5])
-        self.r_filter = 10         # 20 for non-Gaussian
+        self.q_filter = np.diag([0, 0, 0])
+        self.r_filter = 20         # 20 for non-Gaussian
         # MCUKF part
         self.eps = 1e-8
         # UKF part
@@ -33,22 +31,24 @@ class Simulation():
         self.beta = 2
         self.kappa = 3
         # System initial values
-        self.sys_init = [10]
-        # self.sys_init = ([3e5, -2e4, 1e-3])
+        # self.sys_init = [10]
+        self.sys_init = [3e5, -2e4, 1e-3]
         # Filter initial values
-        self.filter_init = ([11], [1])
-        # self.filter_init = ([3e5, -2e4, 9e-4], [1e2, 4e2, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
+        # self.filter_init = ([11], [1])
+        self.filter_init = ([3e5, -2e4, 9e-4], [1e2, 4e2, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
+        self.states_dimension = len(self.sys_init)
+        self.obs_dimension = 1
         # --------------------------------------------------------------------------------- #
         # --------------------------------- Impulse noise --------------------------------- #
         self.additional_sys_noise = []
-        for _ in range(self.repeat):
-            additional_sys_noise = np.asmatrix(np.zeros((self.states_dimension, self.N)))
-            for i in range(self.N):
-                if np.random.randint(0, 100) < 10:
-                    additional_sys_noise[:, i] = np.dot(
-                                                        np.random.choice((-1, 1), 1) * np.diag([1]),
-                                                        np.random.randint(500, 800, size=(self.states_dimension, 1)))
-            self.additional_sys_noise.append(additional_sys_noise)
+        # for _ in range(self.repeat):
+        #     additional_sys_noise = np.asmatrix(np.zeros((self.states_dimension, self.N)))
+        #     for i in range(self.N):
+        #         if np.random.randint(0, 100) < 10:
+        #             additional_sys_noise[:, i] = np.dot(
+        #                                                 np.random.choice((-1, 1), 1) * np.diag([1]),
+        #                                                 np.random.randint(500, 800, size=(self.states_dimension, 1)))
+        #     self.additional_sys_noise.append(additional_sys_noise)
         self.additional_obs_noise = []
         for _ in range(self.repeat):
             additional_obs_noise = np.zeros((self.obs_dimension, self.N))

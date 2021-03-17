@@ -4,7 +4,7 @@ import winsound
 
 mg = Manager()
 
-repeat = 10
+repeat = 30
 sigmas = [2, 4, 6, 10]
 sim = Sim(repeat)
 sim.sys_run()

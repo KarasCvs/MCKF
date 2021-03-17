@@ -9,7 +9,7 @@ import time
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import inv, cholesky
-from functions import NonLinearFunc2 as Func
+from functions import NonLinearFunc as Func
 # from functions import MoveSim as Func
 import matplotlib.pyplot as plt
 import math
@@ -266,7 +266,7 @@ class Filter():
 #   可变bandwidth MCC
     def shift_sigma(self, e, u, alpha_=0.9):
         e = np.linalg.norm(e)
-        sigma_X = (e**2 - 4) / 1e-2*(np.linalg.norm(u)**2 * e**2)  # 为什么要考虑步长? 先不考虑试试. 暂时试着用常数代替噪音方差, 回头记得改回来.
+        sigma_X = (e**2 - 4) / self.cov_R*(np.linalg.norm(u)**2 * e**2)  # 为什么要考虑步长? 先不考虑试试. 暂时试着用常数代替噪音方差, 回头记得改回来.
         if math.isnan(sigma_X):
             sigma_X = 0
         if 0 < sigma_X and sigma_X < 1:
