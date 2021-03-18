@@ -24,7 +24,36 @@ class LinearFunc():
         return observation
 
 
-class NonLinearFunc():
+# 2 states, step input system
+class NonLinearFunc0():
+    def __init__(self, u=0):
+        self.u = u
+        pass
+
+    def state_func(self, states, Ts, k=0):
+        states_ = np.zeros(2).reshape(2, 1)
+        states_[0] = 0.5*states[0, 0] + states[1, 0]*self.u[k-1]
+        states_[1] = -0.05*states[0, 0]*states[1, 0] + self.u[k-1]
+        if states_[0] > 9999999:
+            print('hit')
+        return states_
+
+    def observation_func(self, states, Ts=0, k=0):
+        observation = -states[0]*states[1]
+        return observation
+
+    def states_jacobian(self, states, Ts, k=0):
+        states_jacobian = np.matrix(([0.5, self.u[k-1]], [-0.05*states[1, 0], -0.05*states[0, 0]])).reshape(2, 2)
+        return states_jacobian
+
+    def obs_jacobian(self, states, Ts=0):
+        states[0]
+        obs_jacobian = np.matrix([-states[1, 0], -states[0, 0]]).reshape(1, 2)
+        return obs_jacobian
+
+
+# 3 states, object falling simulation
+class NonLinearFunc1():
     def __init__(self):
         pass
 
@@ -48,7 +77,7 @@ class NonLinearFunc():
         self.H = np.matrix((float(math.sqrt(1e5*1e5 + (states[0]-1e5)**2)/states[0]), 0, 0))
         return self.H
 
-    def states_jacobian(self, states, Ts):
+    def states_jacobian(self, states, Ts, k=0):
         x0 = float(states[0])
         x1 = float(states[1])
         x2 = float(states[2])
@@ -76,7 +105,7 @@ class NonLinearFunc2():
         observation = 0.05 * states[0]**2
         return observation
 
-    def states_jacobian(self, states, Ts):
+    def states_jacobian(self, states, Ts, k=0):
         states_jacobian = 0.5 + 25*((1-states[0]**2)/(1+states[0]**2)**2)
         return states_jacobian
 
@@ -99,7 +128,7 @@ class NonLinearFunc3():
         observation = states[0] ** 3
         return observation
 
-    def states_jacobian(self, states, Ts):
+    def states_jacobian(self, states, Ts, k=0):
         states_jacobian = 1 - 3*math.sin((states[0]/10))
         return states_jacobian
 
@@ -127,7 +156,7 @@ class MoveSim():
         observation[1] = states[1]
         return observation
 
-    def states_jacobian(self, states, Ts):
+    def states_jacobian(self, states, Ts, k=0):
         x0 = float(states[0])
         x1 = float(states[1])
         states_jacobian = np.matrix([-math.sin(x0), 0], [0, math.cos(x1)])
