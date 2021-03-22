@@ -54,7 +54,7 @@ class NonLinearFunc0():
 
 # 3 states, object falling simulation
 class NonLinearFunc1():
-    def __init__(self):
+    def __init__(self, u=0):
         pass
 
     def state_func(self, states, Ts, k=0):
@@ -93,7 +93,7 @@ class NonLinearFunc1():
 
 
 class NonLinearFunc2():
-    def __init__(self):
+    def __init__(self, u=0):
         pass
 
     def state_func(self, states, Ts, k=0):
@@ -116,7 +116,7 @@ class NonLinearFunc2():
 
 
 class NonLinearFunc3():
-    def __init__(self):
+    def __init__(self, u=0):
         pass
 
     def state_func(self, states, Ts, k=0):

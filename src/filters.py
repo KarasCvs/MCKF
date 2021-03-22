@@ -85,15 +85,15 @@ class NonlinearSys():
 
     # Generate noise lists.
     def noise_init(self, additional_sys_noise=0, additional_obs_noise=0):
-        self.obs_noise = [
-            np.mat(self.std_R * randn(self.obs_dimension, self.N) +
-                   additional_obs_noise[i]) for i in range(self.repeat)
-        ]
         self.sys_noise = [
             np.mat(np.dot(self.std_Q, randn(self.states_dimension, self.N)) +
                    additional_sys_noise[i]) for i in range(self.repeat)
         ]
-        return self.obs_noise, self.sys_noise
+        self.obs_noise = [
+            np.mat(self.std_R * randn(self.obs_dimension, self.N) +
+                   additional_obs_noise[i]) for i in range(self.repeat)
+        ]
+        return self.sys_noise, self.obs_noise
 
     def states_init(self, X0):
         for j in range(self.repeat):
@@ -114,16 +114,19 @@ class NonlinearSys():
         return self.time_line, self.real_states, self.real_obs, self.sensor
 
     def plot(self):
+        plt.figure(1)
         for i in range(self.states_dimension):
             plt.subplot(100 * self.states_dimension + 11 + i)
             plt.plot(self.time_line,
-                     np.array(self.real_states)[i, :].reshape(self.N, ),
+                     np.array(self.real_states[0])[i, :].reshape(self.N,),
                      linewidth=1,
                      linestyle="-",
                      label="system states")
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title(f"X{i+1}")
+        plt.figure(2)
+        plt.plot(self.time_line, np.array(self.sensor[0]).reshape(self.N,))
         plt.show()
 
 
@@ -289,9 +292,9 @@ class EKF(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts, k)
         # Calculate jacobin
-        F = self.func.states_jacobian(x_previous, self.Ts, self.k)
+        F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         # For time-variant system
         P = F * P * F.T + self.cov_Q
@@ -315,9 +318,9 @@ class IMCEKF2(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts, k)
         # Calculate jacobin
-        F = self.func.states_jacobian(x_previous, self.Ts, self.k)
+        F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         P = F * P * F.T + self.cov_Q
         # posterior
@@ -350,10 +353,10 @@ class IMCEKF(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts, k)
         measuring_error = sensor_data - self.func.observation_func(x_prior)
         # Calculate jacobin
-        F = self.func.states_jacobian(x_previous, self.Ts, self.k)
+        F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         P = F * P * F.T + self.cov_Q
         # posterior
@@ -367,7 +370,10 @@ class IMCEKF(Filter):
                 self.kernel_G((states_error.T*inv(P)*states_error))
             K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
             x_posterior = x_prior + K * measuring_error
-            evaluation = (np.linalg.norm(x_posterior-x_posterior_temp))/np.linalg.norm(x_posterior_temp)
+            if np.linalg.norm(x_posterior_temp) == 0:
+                evaluation = 0
+            else:
+                evaluation = (np.linalg.norm(x_posterior-x_posterior_temp))/np.linalg.norm(x_posterior_temp)
             x_posterior_temp = x_posterior
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
@@ -385,10 +391,10 @@ class IMCEKF3(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts, k)
         measuring_error = sensor_data - self.func.observation_func(x_prior)
         # Calculate jacobin
-        F = self.func.states_jacobian(x_previous, self.Ts, self.k)
+        F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         P = F * P * F.T + self.cov_Q
         # posterior
@@ -421,10 +427,10 @@ class MCEKF2(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts, k)
         measuring_error = sensor_data - self.func.observation_func(x_prior)
         # Calculate jacobin
-        F = self.func.states_jacobian(x_previous, self.Ts, self.k)
+        F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         P = F * P * F.T + self.cov_Q
         # posterior
@@ -449,10 +455,10 @@ class MCEKF1(Filter):
     def estimate(self, x_previous, sensor_data, P, k):
         # priori
         self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts)
+        x_prior = self.func.state_func(x_previous, self.Ts, k)
         obs = self.func.observation_func(x_prior)
         # Calculate jacobin
-        F = self.func.states_jacobian(x_previous, self.Ts, self.k)
+        F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         # For time-variant system
         P = F * P * F.T + self.cov_Q

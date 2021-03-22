@@ -21,10 +21,10 @@ class Simulation():
         self.N = int(self.t/self.Ts)
         # noise
         self.q = np.diag([1, 1])
-        self.r = 5                # 20 for non-Gaussian
+        self.r = 3               # 20 for non-Gaussian
         # Filter parameters
-        self.q_filter = np.diag([np.sqrt(0.1), np.sqrt(0.1)])
-        self.r_filter = 5         # 20 for non-Gaussian
+        self.q_filter = np.diag([0.5, 0.5])
+        self.r_filter = 3         # 20 for non-Gaussian
         # MCUKF part
         self.eps = 1e-8
         # UKF part
@@ -36,31 +36,34 @@ class Simulation():
         self.sys_init = [0, 0]   # [3e5, -2e4, 1e-3]
         # Filter initial values
         # self.filter_init = ([11], [1])
-        self.filter_init = ([0, 0], [math.sqrt(0.1), math.sqrt(0.1)])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
+        self.filter_init = ([0, 0], [1, 1])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
         self.states_dimension = len(self.sys_init)
         self.obs_dimension = 1
         self.step()
         # --------------------------------------------------------------------------------- #
         # --------------------------------- Impulse noise --------------------------------- #
-        impulse = 1
+        sys_impulse = 1
+        obs_impulse = 1
+        sys_diag = [1 for i in range(self.states_dimension)]
         self.additional_sys_noise = []
         for _ in range(self.repeat):
             additional_sys_noise = np.asmatrix(np.zeros((self.states_dimension, self.N)))
             for i in range(self.N):
                 if np.random.randint(0, 100) < 5:
                     additional_sys_noise[:, i] = np.dot(
-                                                        np.random.choice((-1, 1), 2) * np.diag([1, 1]),
-                                                        np.random.randint(2, 5, size=(self.states_dimension, 1)))
+                                                        np.random.choice((-1, 1), self.states_dimension) * np.diag(sys_diag),
+                                                        np.random.randint(5, 8, size=(self.states_dimension, 1)))
             self.additional_sys_noise.append(additional_sys_noise)
         self.additional_obs_noise = []
         for _ in range(self.repeat):
             additional_obs_noise = np.zeros((self.obs_dimension, self.N))
             for i in range(self.N):
                 if np.random.randint(0, 100) < 5:
-                    additional_obs_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(200, 500)
+                    additional_obs_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(100, 200)
             self.additional_obs_noise.append(additional_obs_noise)
-        if not impulse:
+        if not sys_impulse:
             self.additional_sys_noise = np.zeros(self.repeat)
+        if not obs_impulse:
             self.additional_obs_noise = np.zeros(self.repeat)
         # --------------------------------------------------------------------------------- #
 
@@ -69,7 +72,7 @@ class Simulation():
         # System initial
         sys = Sys(self.states_dimension, self.obs_dimension, self.t, self.Ts, self.q, self.r, self.input, self.repeat)
         # Initial noise lists.
-        self.obs_noise, self.sys_noise = sys.noise_init(self.additional_sys_noise, self.additional_obs_noise)
+        self.sys_noise, self.obs_noise = sys.noise_init(self.additional_sys_noise, self.additional_obs_noise)
         # Rocket system initiation
         sys.states_init(self.sys_init)
         self.time_line, self.states, self.real_obs, self.sensor = sys.run()
@@ -155,9 +158,13 @@ class Simulation():
     def step(self):
         self.input = np.zeros(self.N)
         for i in range(self.N):
-            if i > (5):
+            if (self.N/4) > i > (5):
                 self.input[i] = 1
-                if i > (self.N/2):
-                    self.input[i] = 2
+            elif (self.N/2) > i > (self.N/4):
+                self.input[i] = 0
+            elif (3*self.N/4) > i > (self.N/2):
+                self.input[i] = 1
+            elif i > (3*self.N/4):
+                self.input[i] = 0
         return self.input
 
