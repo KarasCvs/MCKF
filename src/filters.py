@@ -9,7 +9,7 @@ import time
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import inv, cholesky
-from functions import NonLinearFunc0 as Func
+from functions import NonLinearFunc2 as Func
 # from functions import MoveSim as Func
 import matplotlib.pyplot as plt
 import math
@@ -216,6 +216,24 @@ class Filter():
             res = 1e-8
         return res
 
+    def kernel_G_R(self, e, u=0):
+        if self.shift_bandwidth:
+            self.sigma_square = 1e+10
+            self.shift_sigma(e, u)
+        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square))))
+        if res < 1e-8:
+            res = 1e-8
+        return res
+
+    def kernel_G_Q(self, e, u=0):
+        if self.shift_bandwidth:
+            self.sigma_square = 1e+10
+            self.shift_sigma(e, u)
+        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square))))
+        if res < 1e-8:
+            res = 1e-8
+        return res
+
     def mc(self, E, u=0):
         entropy_x = np.zeros(self.states_dimension)
         entropy_y = np.zeros(self.obs_dimension)
@@ -267,7 +285,7 @@ class Filter():
         return trans_mean, trans_points, trans_cov, trans_dev
 
 #   可变bandwidth MCC
-    def shift_sigma(self, e, u, alpha_=0.9):
+    def shift_sigma(self, e, u, alpha_=0.2):
         e = np.linalg.norm(e)
         sigma_X = (e**2 - 4) / self.cov_R*(np.linalg.norm(u)**2 * e**2)  # 为什么要考虑步长? 先不考虑试试. 暂时试着用常数代替噪音方差, 回头记得改回来.
         if math.isnan(sigma_X):
@@ -307,41 +325,6 @@ class EKF(Filter):
 
 
 ##########################################################################################################
-# Update h(x)
-class IMCEKF2(Filter):
-    def __init__(self, parameters):
-        states_dimension, obs_dimension, t, Ts, q_, r_, alpha, beta, kappa, sigma, eps, data_dic, repeat, input = parameters
-        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, data_dic, repeat, input)
-        self.mc_init(sigma, eps)
-        self.tag = "IMCEKF_t"
-
-    def estimate(self, x_previous, sensor_data, P, k):
-        # priori
-        self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts, k)
-        # Calculate jacobin
-        F = self.func.states_jacobian(x_previous, self.Ts, k)
-        H = self.func.obs_jacobian(x_prior)
-        P = F * P * F.T + self.cov_Q
-        # posterior
-        x_posterior_temp = x_prior
-        evaluation = 1
-        mc_count = 0
-        while evaluation > self.eps:
-            mc_count += 1
-            measuring_error = sensor_data - self.func.observation_func(x_posterior_temp)
-            states_error = x_posterior_temp - x_prior
-            L = self.kernel_G(measuring_error.T*inv(self.cov_R)*measuring_error) / \
-                self.kernel_G(states_error.T*inv(P)*states_error)
-            K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
-            x_posterior = x_prior + K * measuring_error  # (sensor_data - self.func.observation_func(x_prior))
-            evaluation = (np.linalg.norm(x_posterior-x_posterior_temp))/np.linalg.norm(x_posterior_temp)
-            x_posterior_temp = x_posterior
-        P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
-            + K*self.cov_R*K.T
-        return x_posterior, P_posterior, 0
-
-
 # Yoh's method
 class IMCEKF(Filter):
     def __init__(self, parameters):
@@ -366,8 +349,46 @@ class IMCEKF(Filter):
         while evaluation > self.eps:
             mc_count += 1
             states_error = x_posterior_temp - x_prior
-            L = self.kernel_G(measuring_error.T*inv(self.cov_R)*measuring_error) / \
-                self.kernel_G((states_error.T*inv(P)*states_error))
+            L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error) / \
+                self.kernel_G_Q((states_error.T*inv(P)*states_error))
+            K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
+            x_posterior = x_prior + K * measuring_error
+            if np.linalg.norm(x_posterior_temp) == 0:
+                evaluation = 0
+            else:
+                evaluation = (np.linalg.norm(x_posterior-x_posterior_temp))/np.linalg.norm(x_posterior_temp)
+            x_posterior_temp = x_posterior
+        P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
+            + K*self.cov_R*K.T
+        return x_posterior, P_posterior, 0
+
+
+# Yoh's method, for variable bandwidth.
+class IMCEKF2(Filter):
+    def __init__(self, parameters):
+        states_dimension, obs_dimension, t, Ts, q_, r_, alpha, beta, kappa, sigma, eps, data_dic, repeat, input = parameters
+        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, data_dic, repeat, input)
+        self.mc_init(sigma, eps)
+        self.tag = "IMCEKF2"
+
+    def estimate(self, x_previous, sensor_data, P, k):
+        # priori
+        self.k = k
+        x_prior = self.func.state_func(x_previous, self.Ts, k)
+        measuring_error = sensor_data - self.func.observation_func(x_prior)
+        # Calculate jacobin
+        F = self.func.states_jacobian(x_previous, self.Ts, k)
+        H = self.func.obs_jacobian(x_prior)
+        P = F * P * F.T + self.cov_Q
+        # posterior
+        x_posterior_temp = x_prior
+        evaluation = 1
+        mc_count = 0
+        while evaluation > self.eps:
+            mc_count += 1
+            states_error = x_posterior_temp - x_prior
+            L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error) / \
+                self.kernel_G_Q((states_error.T*inv(P)*states_error))
             K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
             x_posterior = x_prior + K * measuring_error
             if np.linalg.norm(x_posterior_temp) == 0:

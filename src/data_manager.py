@@ -83,7 +83,7 @@ class Manager():
                 plt.plot(self.time_line, np.array(self.states[j])[i, :].reshape(self.N,), linewidth=1, linestyle="-", label=j)
             plt.grid(True)
             plt.legend(loc='upper left')
-            plt.title(f"States {i}")
+            plt.title(f"States {i+1}")
 
     def plot_obs(self):
         plt.figure()
@@ -103,7 +103,7 @@ class Manager():
                 plt.plot(self.time_line, np.array(self.mse[j])[i, :].reshape(self.N,), linewidth=1, linestyle="-", label=j)
             plt.grid(True)
             plt.legend(loc='upper left')
-            plt.title(f"MSE of state{i}")
+            plt.title(f"MSE of state{i+1}")
 
     def plot_mse(self):
         for i in self.ta_mse:
