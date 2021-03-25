@@ -9,10 +9,24 @@ import time
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import inv, cholesky
-from functions import NonLinearFunc2 as Func
+from functions import NonLinearFunc1 as Func
 # from functions import MoveSim as Func
 import matplotlib.pyplot as plt
 import math
+
+
+def in_log(keyword):
+    def decorator(func):
+        def wrapper(self, *args, **kwargs):
+            res = func(self, *args, **kwargs)
+            if self.shift_bandwidth:
+                name = self.tag + ', ' + keyword
+                if name not in self.data_dic["others"]:
+                    self.data_dic['others'][name] = [[0] for _ in range(self.repeat)]
+                exec(f"self.data_dic['others'][name][self.repeat_count].append({keyword})")
+            return(res)
+        return wrapper
+    return decorator
 
 
 class LinearSys():
@@ -162,6 +176,10 @@ class Filter():
         filter0, P0 = init_parameters
         self.states[:, 0] = np.array(filter0).reshape(self.states_dimension, 1)
         self.P = np.diag(P0)
+        if self.shift_bandwidth:
+            self.sigma_square = 400
+            self.sigma_square_R = 400
+            self.sigma_square_Q = 400
 
     def summarizes(self, states_mean, mse, ta_mse, run_time):
         self.data_dic['states'][self.tag+' states'] = states_mean.tolist()
@@ -184,7 +202,7 @@ class Filter():
                 self.states[:, i], self.P, count = \
                     self.estimate(self.states[:, i-1],
                                   sensor[j][:, i],
-                                  self.P, i)
+                                  self.P, i, j)
                 mc_count += count
             states_mean += self.states
             mse += self.MSE(real_states[j])
@@ -205,12 +223,13 @@ class Filter():
 
     def mc_init(self, sigma, eps=1e-6):
         self.sigma_square = sigma**2
+        self.sigma_square_R = self.sigma_square
+        self.sigma_square_Q = self.sigma_square
         self.eps = eps
 
     def kernel_G(self, e, u=0):
         if self.shift_bandwidth:
-            self.sigma_square = 1e+10
-            self.shift_sigma(e, u)
+            self.shift_sigma(self.sigma_square, e, u)
         res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square))))
         if res < 1e-8:
             res = 1e-8
@@ -218,21 +237,31 @@ class Filter():
 
     def kernel_G_R(self, e, u=0):
         if self.shift_bandwidth:
-            self.sigma_square = 1e+10
-            self.shift_sigma(e, u)
-        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square))))
-        if res < 1e-8:
-            res = 1e-8
+            self.sigma_square_R = self.shift_sigma(self.sigma_square_R, e, u)
+        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square_R))))
         return res
 
     def kernel_G_Q(self, e, u=0):
         if self.shift_bandwidth:
-            self.sigma_square = 1e+10
-            self.shift_sigma(e, u)
-        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square))))
+            self.sigma_square_Q = self.shift_sigma(self.sigma_square_Q, e, u)
+        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square_Q))))
         if res < 1e-8:
             res = 1e-8
         return res
+
+#   可变bandwidth MCC
+    def shift_sigma(self, sigma_square, e, u, alpha_=0.8):
+        e = np.linalg.norm(e)
+        sigma_X = (e**2 - self.cov_R) / (1e-3*np.linalg.norm(u)**2 * e**2)  # 常数是步长
+        if math.isnan(sigma_X):
+            pass
+        if 0 <= sigma_X and sigma_X < 1:
+            sigma_main = -e**2 / (2 * np.log(sigma_X))  # 如何对矩阵求对数? 如果e是矩阵那么sigma_X自然也是矩阵. 按照论文, 噪音也应当是矩阵.
+            sigma_temp = alpha_ * sigma_square + (1 - alpha_) * min(sigma_main, sigma_square)
+            if type(sigma_temp) is np.matrix:
+                sigma_temp = np.asscalar(sigma_temp)
+            sigma_square = sigma_temp
+        return sigma_square
 
     def mc(self, E, u=0):
         entropy_x = np.zeros(self.states_dimension)
@@ -284,21 +313,6 @@ class Filter():
         trans_cov = trans_dev * np.diag(self.W_cov) * trans_dev.T + Noise_cov
         return trans_mean, trans_points, trans_cov, trans_dev
 
-#   可变bandwidth MCC
-    def shift_sigma(self, e, u, alpha_=0.2):
-        e = np.linalg.norm(e)
-        sigma_X = (e**2 - 4) / self.cov_R*(np.linalg.norm(u)**2 * e**2)  # 为什么要考虑步长? 先不考虑试试. 暂时试着用常数代替噪音方差, 回头记得改回来.
-        if math.isnan(sigma_X):
-            sigma_X = 0
-        if 0 < sigma_X and sigma_X < 1:
-            sigma_main = -e**2 / (2 * np.log(sigma_X))  # 如何对矩阵求对数? 如果e是矩阵那么sigma_X自然也是矩阵. 按照论文, 噪音也应当是矩阵.
-            sigma_temp = alpha_ * self.sigma_square + (1 - alpha_) * min(sigma_main, self.sigma_square)
-            self.sigma_square = sigma_temp
-            print("hit")
-        else:
-            pass
-        # print(self.sigma_square)
-
 
 ##########################################################################################################
 class EKF(Filter):
@@ -307,8 +321,9 @@ class EKF(Filter):
         Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, data_dic, repeat, input)
         self.tag = "EKF"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         x_prior = self.func.state_func(x_previous, self.Ts, k)
         # Calculate jacobin
@@ -333,8 +348,9 @@ class IMCEKF(Filter):
         self.mc_init(sigma, eps)
         self.tag = "IMCEKF"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         x_prior = self.func.state_func(x_previous, self.Ts, k)
         measuring_error = sensor_data - self.func.observation_func(x_prior)
@@ -371,8 +387,10 @@ class IMCEKF2(Filter):
         self.mc_init(sigma, eps)
         self.tag = "IMCEKF2"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    @in_log('self.sigma_square_R')
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         x_prior = self.func.state_func(x_previous, self.Ts, k)
         measuring_error = sensor_data - self.func.observation_func(x_prior)
@@ -387,49 +405,14 @@ class IMCEKF2(Filter):
         while evaluation > self.eps:
             mc_count += 1
             states_error = x_posterior_temp - x_prior
-            L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error) / \
-                self.kernel_G_Q((states_error.T*inv(P)*states_error))
+            L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error, x_prior) / \
+                self.kernel_G_Q(states_error.T*inv(P)*states_error, x_prior)
             K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
             x_posterior = x_prior + K * measuring_error
             if np.linalg.norm(x_posterior_temp) == 0:
                 evaluation = 0
             else:
                 evaluation = (np.linalg.norm(x_posterior-x_posterior_temp))/np.linalg.norm(x_posterior_temp)
-            x_posterior_temp = x_posterior
-        P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
-            + K*self.cov_R*K.T
-        return x_posterior, P_posterior, 0
-
-
-# IMCEKF3 is the version same with IMCEKF, but we use it to test shift bandwidth
-class IMCEKF3(Filter):
-    def __init__(self, parameters):
-        states_dimension, obs_dimension, t, Ts, q_, r_, alpha, beta, kappa, sigma, eps, data_dic, repeat, input = parameters
-        Filter.__init__(self, states_dimension, obs_dimension, t, Ts, q_, r_, data_dic, repeat, input)
-        self.mc_init(sigma, eps)
-        self.tag = "IMCEKF3"
-
-    def estimate(self, x_previous, sensor_data, P, k):
-        # priori
-        self.k = k
-        x_prior = self.func.state_func(x_previous, self.Ts, k)
-        measuring_error = sensor_data - self.func.observation_func(x_prior)
-        # Calculate jacobin
-        F = self.func.states_jacobian(x_previous, self.Ts, k)
-        H = self.func.obs_jacobian(x_prior)
-        P = F * P * F.T + self.cov_Q
-        # posterior
-        x_posterior_temp = x_prior
-        evaluation = 1
-        mc_count = 0
-        while evaluation > self.eps:
-            mc_count += 1
-            states_error = x_posterior_temp - x_prior
-            L = self.kernel_G(measuring_error.T*inv(self.cov_R)*measuring_error) / \
-                self.kernel_G((states_error.T*inv(P)*states_error))
-            K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
-            x_posterior = x_prior + K * measuring_error
-            evaluation = (np.linalg.norm(x_posterior-x_posterior_temp))/np.linalg.norm(x_posterior_temp)
             x_posterior_temp = x_posterior
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
@@ -445,8 +428,9 @@ class MCEKF2(Filter):
         self.mc_init(sigma)
         self.tag = "MCEKF_DS"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         x_prior = self.func.state_func(x_previous, self.Ts, k)
         measuring_error = sensor_data - self.func.observation_func(x_prior)
@@ -473,8 +457,9 @@ class MCEKF1(Filter):
         self.mc_init(sigma, eps)
         self.tag = "MCEKF_FPI"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         x_prior = self.func.state_func(x_previous, self.Ts, k)
         obs = self.func.observation_func(x_prior)
@@ -523,8 +508,9 @@ class MCUKF1(Filter):
         self.mc_init(sigma, eps)
         self.tag = "MCUKF1"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         X_sigmas = self.sigma_points(x_previous, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas,
@@ -582,8 +568,9 @@ class MCUKF2(Filter):
         self.mc_init(sigma, eps)
         self.tag = "MCUKF2"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         X_sigmas = self.sigma_points(x_previous, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas,
@@ -617,8 +604,9 @@ class UKF(Filter):
         self.ut_init(alpha, beta, kappa)
         self.tag = "UKF"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         X_sigmas = self.sigma_points(x_previous, P)
         x_mean, x_points, P_xx, x_dev = self.ut(self.F, X_sigmas,
@@ -648,8 +636,9 @@ class MCKF1(Filter):
         self.mc_init(sigma, eps)
         self.tag = "MCKF1"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         F = self.func.state_matrix(x_previous, self.Ts)
         x_prior = F * x_previous
@@ -695,8 +684,9 @@ class MCKF2(Filter):
         self.mc_init(sigma, eps)
         self.tag = "MCKF2"
 
-    def estimate(self, x_previous, sensor_data, P, k):
+    def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
+        self.repeat_count = repeat_count
         self.k = k
         F = self.func.state_matrix(x_previous, self.Ts)
         x_prior = F * x_previous

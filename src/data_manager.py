@@ -46,7 +46,7 @@ class Manager():
         self.states_dimension = data['states dimension']
         self.obs_dimension = data['obs dimension']
         self.N = int(data['time']/data['ts'])
-        self.time_line = np.array(data['time line'])
+        self.time_line = data['time line']
         self.states = data['states']
         self.observations = data['observations']
         self.mse = data['mse']
@@ -80,7 +80,7 @@ class Manager():
         for i in range(self.states_dimension):
             plt.subplot(100*self.states_dimension+11+i)
             for j in self.states:
-                plt.plot(self.time_line, np.array(self.states[j])[i, :].reshape(self.N,), linewidth=1, linestyle="-", label=j)
+                plt.plot(self.time_line, self.states[j][i], linewidth=1, linestyle="-", label=j)
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title(f"States {i+1}")
@@ -90,7 +90,7 @@ class Manager():
         for i in range(self.obs_dimension):
             plt.subplot(100*self.obs_dimension+11+i)
             for j in self.observations:
-                plt.plot(self.time_line, np.array(self.observations[j])[i].reshape(self.N,), linewidth=1, linestyle="-", label=j)
+                plt.plot(self.time_line, self.observations[j][i], linewidth=1, linestyle="-", label=j)
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title("Observation")
@@ -100,7 +100,7 @@ class Manager():
         for i in range(self.states_dimension):
             plt.subplot(100*self.states_dimension+11+i)
             for j in self.mse:
-                plt.plot(self.time_line, np.array(self.mse[j])[i, :].reshape(self.N,), linewidth=1, linestyle="-", label=j)
+                plt.plot(self.time_line, self.mse[j][i], linewidth=1, linestyle="-", label=j)
             plt.grid(True)
             plt.legend(loc='upper left')
             plt.title(f"MSE of state{i+1}")
@@ -109,21 +109,10 @@ class Manager():
         for i in self.ta_mse:
             print(f'{i}=\n{self.ta_mse[i]}\n')
 
-    # # Plot anything that input as data.
-    # def plot(self, data_list, parametes, filename=None):
-    #     for i in range(data_list):
-    #         for i in range(data_list[i].shape[0]):
-    #             plt.figure()
-    #             plt.plot(self.time_line, data.reshape(data_list[i].shape[1]), label=target)
-    #             plt.grid(True)
-    #             plt.legend(loc='upper left')
-    #             plt.title(target)
-
     def show(self):
         plt.show()
 
     def find(self, key, filename=None, data=None):
-        key = key.lower()
         if data is None:
             data = self.data
         for i in data:
@@ -133,6 +122,22 @@ class Manager():
                 value = self.find(key, filename, data[i])
                 if value is not None:
                     return value
+
+    # Only plot value(inside of class) that self.find() found
+    def plot(self, data, name=None):
+        length = len(data[0])
+        if len(data) == self.data['repeat']:
+            average = [0 for _ in range(length)]
+            for j in range(length):
+                for i in range(len(data)):
+                    average[j] += data[i][j]
+                average[j] /= len(data)
+        data = average
+        plt.figure()
+        plt.plot(self.time_line, data)
+        plt.grid(True)
+        plt.legend(loc='upper left')
+        plt.title(name)
 
     # locate in files.
     def locate(self, keywords):
