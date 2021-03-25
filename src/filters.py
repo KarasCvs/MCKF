@@ -178,8 +178,8 @@ class Filter():
         self.P = np.diag(P0)
         if self.shift_bandwidth:
             self.sigma_square = 400
-            self.sigma_square_R = 400
-            self.sigma_square_Q = 400
+            self.sigma_square_R = 100
+            self.sigma_square_Q = 100
 
     def summarizes(self, states_mean, mse, ta_mse, run_time):
         self.data_dic['states'][self.tag+' states'] = states_mean.tolist()
@@ -227,7 +227,7 @@ class Filter():
         self.sigma_square_Q = self.sigma_square
         self.eps = eps
 
-    def kernel_G(self, e, u=0):
+    def kernel_G(self, e, error=0, u=0):
         if self.shift_bandwidth:
             self.shift_sigma(self.sigma_square, e, u)
         res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square))))
@@ -235,28 +235,28 @@ class Filter():
             res = 1e-8
         return res
 
-    def kernel_G_R(self, e, u=0):
+    def kernel_G_R(self, e, error=0, u=0, cov=0):
         if self.shift_bandwidth:
             self.sigma_square_R = self.shift_sigma(self.sigma_square_R, e, u)
         res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square_R))))
         return res
 
-    def kernel_G_Q(self, e, u=0):
+    def kernel_G_Q(self, e, error=0, u=0, cov=0):
         if self.shift_bandwidth:
-            self.sigma_square_Q = self.shift_sigma(self.sigma_square_Q, e, u)
+            self.sigma_square_Q = self.shift_sigma(self.sigma_square_Q, error, u)
         res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square_Q))))
         if res < 1e-8:
             res = 1e-8
         return res
 
 #   可变bandwidth MCC
-    def shift_sigma(self, sigma_square, e, u, alpha_=0.8):
-        e = np.linalg.norm(e)
-        sigma_X = (e**2 - self.cov_R) / (1e-3*np.linalg.norm(u)**2 * e**2)  # 常数是步长
+    def shift_sigma(self, sigma_square, error, u, alpha_=0.9):
+        e = np.dot(error.T, error)
+        sigma_X = (e - self.cov_R) / (1e-3*np.linalg.norm(u)**2 * e)  # 常数是步长
         if math.isnan(sigma_X):
             pass
         if 0 <= sigma_X and sigma_X < 1:
-            sigma_main = -e**2 / (2 * np.log(sigma_X))  # 如何对矩阵求对数? 如果e是矩阵那么sigma_X自然也是矩阵. 按照论文, 噪音也应当是矩阵.
+            sigma_main = -e / (2 * np.log(sigma_X))  # 如何对矩阵求对数? 如果e是矩阵那么sigma_X自然也是矩阵. 按照论文, 噪音也应当是矩阵.
             sigma_temp = alpha_ * sigma_square + (1 - alpha_) * min(sigma_main, sigma_square)
             if type(sigma_temp) is np.matrix:
                 sigma_temp = np.asscalar(sigma_temp)
@@ -405,8 +405,8 @@ class IMCEKF2(Filter):
         while evaluation > self.eps:
             mc_count += 1
             states_error = x_posterior_temp - x_prior
-            L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error, x_prior) / \
-                self.kernel_G_Q(states_error.T*inv(P)*states_error, x_prior)
+            L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error, measuring_error, x_prior, self.cov_R) / \
+                self.kernel_G_Q(states_error.T*inv(P)*states_error, states_error, x_prior, P)
             K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
             x_posterior = x_prior + K * measuring_error
             if np.linalg.norm(x_posterior_temp) == 0:

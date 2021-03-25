@@ -10,6 +10,7 @@ from filters import NonlinearSys as Sys
 import numpy as np
 import math
 
+
 class Simulation():
     def __init__(self, repeat_):
         # --------------------------------- System parameters --------------------------------- #
@@ -57,7 +58,7 @@ class Simulation():
             additional_obs_noise = np.zeros((self.obs_dimension, self.N))
             for i in range(self.N):
                 if np.random.randint(0, 100) < 5:
-                    additional_obs_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(self.r*10, self.r*15+1)
+                    additional_obs_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(self.r*15, self.r*25+1)
             self.additional_obs_noise.append(additional_obs_noise)
         if not sys_impulse:
             self.additional_sys_noise = np.zeros(self.repeat)
