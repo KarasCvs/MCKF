@@ -134,10 +134,23 @@ class Manager():
                 average[j] /= len(data)
         data = average
         plt.figure()
-        plt.plot(self.time_line, data)
-        plt.grid(True)
-        plt.legend(loc='upper left')
-        plt.title(name)
+        try:
+            plt.plot([i for i in range(len(data))], data)
+            plt.grid(True)
+            # plt.legend(loc='upper left')
+            plt.title(name)
+        except ValueError:
+            dimension = data[0].shape[0]
+            plot_list = [[] for _ in range(dimension)]
+            for i in range(dimension):
+                for j in data:
+                    plot_list[i].append(np.asscalar(j[i]))
+            for i in range(dimension):
+                plt.subplot(100*dimension+11+i)
+                plt.plot([i for i in range(len(plot_list[i]))], plot_list[i], linewidth=1)
+                plt.grid(True)
+                # plt.legend(loc='upper left')
+                plt.title(name)
 
     # locate in files.
     def locate(self, keywords):

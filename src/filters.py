@@ -9,21 +9,21 @@ import time
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import inv, cholesky
-from functions import NonLinearFunc1 as Func
+from functions import NonLinearFunc2 as Func
 # from functions import MoveSim as Func
 import matplotlib.pyplot as plt
 import math
 
 
-def in_log(keyword):
+def in_log_dec(keyword):
     def decorator(func):
         def wrapper(self, *args, **kwargs):
             res = func(self, *args, **kwargs)
-            if self.shift_bandwidth:
-                name = self.tag + ', ' + keyword
-                if name not in self.data_dic["others"]:
-                    self.data_dic['others'][name] = [[0] for _ in range(self.repeat)]
-                exec(f"self.data_dic['others'][name][self.repeat_count].append({keyword})")
+            name = self.tag + ', ' + keyword
+            if name not in self.data_dic["others"]:
+                defult = eval(f"{keyword}")
+                self.data_dic['others'][name] = [[defult] for _ in range(self.repeat)]
+            exec(f"self.data_dic['others'][name][self.repeat_count].append({keyword})")
             return(res)
         return wrapper
     return decorator
@@ -224,7 +224,7 @@ class Filter():
     def mc_init(self, sigma, eps=1e-6):
         self.sigma_square = sigma**2
         self.sigma_square_R = self.sigma_square
-        self.sigma_square_Q = self.sigma_square
+        self.sigma_square_Q = (sigma)**2
         self.eps = eps
 
     def kernel_G(self, e, error=0, u=0):
@@ -237,26 +237,26 @@ class Filter():
 
     def kernel_G_R(self, e, error=0, u=0, cov=0):
         if self.shift_bandwidth:
-            self.sigma_square_R = self.shift_sigma(self.sigma_square_R, e, u)
+            self.sigma_square_R = self.shift_sigma(self.sigma_square_R, e, u, cov)
         res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square_R))))
         return res
 
     def kernel_G_Q(self, e, error=0, u=0, cov=0):
         if self.shift_bandwidth:
-            self.sigma_square_Q = self.shift_sigma(self.sigma_square_Q, error, u)
+            self.sigma_square_Q = self.shift_sigma(self.sigma_square_Q, error, u, cov)
         res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square_Q))))
         if res < 1e-8:
             res = 1e-8
         return res
 
 #   可变bandwidth MCC
-    def shift_sigma(self, sigma_square, error, u, alpha_=0.9):
-        e = np.dot(error.T, error)
-        sigma_X = (e - self.cov_R) / (1e-3*np.linalg.norm(u)**2 * e)  # 常数是步长
-        if math.isnan(sigma_X):
+    def shift_sigma(self, sigma_square, error, u, cov, alpha_=0.9):
+        e_square = np.dot(error.T, error)
+        sigma_X = (e_square - cov) / (1e-3*np.linalg.norm(u)**2 * e_square)  # 常数是步长
+        if math.isnan(sigma_X):   # 矩阵维度有问题, 如何让矩阵全部变成一维?
             pass
         if 0 <= sigma_X and sigma_X < 1:
-            sigma_main = -e / (2 * np.log(sigma_X))  # 如何对矩阵求对数? 如果e是矩阵那么sigma_X自然也是矩阵. 按照论文, 噪音也应当是矩阵.
+            sigma_main = -e_square / (2 * np.log(sigma_X))  # 如何对矩阵求对数? 如果e是矩阵那么sigma_X自然也是矩阵. 按照论文, 噪音也应当是矩阵.
             sigma_temp = alpha_ * sigma_square + (1 - alpha_) * min(sigma_main, sigma_square)
             if type(sigma_temp) is np.matrix:
                 sigma_temp = np.asscalar(sigma_temp)
@@ -313,6 +313,12 @@ class Filter():
         trans_cov = trans_dev * np.diag(self.W_cov) * trans_dev.T + Noise_cov
         return trans_mean, trans_points, trans_cov, trans_dev
 
+    def in_log_func(self, ver, keyword=''):
+        name = self.tag + ', ' + keyword
+        if name not in self.data_dic["others"]:
+            self.data_dic['others'][name] = [[ver] for _ in range(self.repeat)]
+        exec(f"self.data_dic['others'][name][self.repeat_count].append(ver)")
+
 
 ##########################################################################################################
 class EKF(Filter):
@@ -367,6 +373,8 @@ class IMCEKF(Filter):
             states_error = x_posterior_temp - x_prior
             L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error) / \
                 self.kernel_G_Q((states_error.T*inv(P)*states_error))
+            # # Logs
+            # self.in_log_func(self.kernel_G_Q((states_error.T*inv(P)*states_error)), 'G(Q)')
             K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
             x_posterior = x_prior + K * measuring_error
             if np.linalg.norm(x_posterior_temp) == 0:
@@ -376,6 +384,8 @@ class IMCEKF(Filter):
             x_posterior_temp = x_posterior
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
+        #  Logs
+        self.in_log_func(self.kernel_G_Q((states_error.T*inv(P)*states_error)), 'G(Q)')
         return x_posterior, P_posterior, 0
 
 
@@ -387,7 +397,6 @@ class IMCEKF2(Filter):
         self.mc_init(sigma, eps)
         self.tag = "IMCEKF2"
 
-    @in_log('self.sigma_square_R')
     def estimate(self, x_previous, sensor_data, P, k, repeat_count=0):
         # priori
         self.repeat_count = repeat_count
@@ -416,6 +425,9 @@ class IMCEKF2(Filter):
             x_posterior_temp = x_posterior
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
+        # Logs
+        self.in_log_func(self.sigma_square_R, 'sigma_square_R')
+        self.in_log_func(self.sigma_square_Q, 'sigma_square_Q')
         return x_posterior, P_posterior, 0
 
 
@@ -445,6 +457,8 @@ class MCEKF2(Filter):
         x_posterior = x_prior + K * measuring_error
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
+        # Logs
+        self.in_log_func(L, 'L')
         return x_posterior, P_posterior, 0
 
 
