@@ -9,7 +9,7 @@ import time
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import inv, cholesky
-from functions import NonLinearFunc2 as Func
+from functions import NonLinearFunc1 as Func
 # from functions import MoveSim as Func
 import matplotlib.pyplot as plt
 import math
@@ -230,21 +230,20 @@ class Filter():
     def kernel_G(self, e, error=0, u=0):
         if self.shift_bandwidth:
             self.shift_sigma(self.sigma_square, e, u)
-        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square))))
-        if res < 1e-8:
-            res = 1e-8
+        res = np.asscalar(np.exp(-((e**2) / (2*self.sigma_square))))
         return res
 
     def kernel_G_R(self, e, error=0, u=0, cov=0):
         if self.shift_bandwidth:
             self.sigma_square_R = self.shift_sigma(self.sigma_square_R, e, u, cov)
-        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square_R))))
+        res = np.asscalar(np.exp(-((e**2) / (2*self.sigma_square_R))))
+        self.in_log_func(e, 'e')
         return res
 
     def kernel_G_Q(self, e, error=0, u=0, cov=0):
         if self.shift_bandwidth:
             self.sigma_square_Q = self.shift_sigma(self.sigma_square_Q, error, u, cov)
-        res = np.asscalar(np.exp(-(np.abs(e) / (2*self.sigma_square_Q))))
+        res = np.asscalar(np.exp(-((e**2) / (2*self.sigma_square_Q))))
         if res < 1e-8:
             res = 1e-8
         return res
@@ -339,6 +338,7 @@ class EKF(Filter):
         P = F * P * F.T + self.cov_Q
         # posterior
         K = P * H.T * inv(H * P * H.T + self.cov_R)
+        self.in_log_func(K, 'K')
         x_posterior = x_prior + K * (sensor_data -
                                      self.func.observation_func(x_prior))
         P_posterior = (np.eye(self.states_dimension) - K * H) * P
@@ -364,6 +364,7 @@ class IMCEKF(Filter):
         F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         P = F * P * F.T + self.cov_Q
+        P_inv = inv(P + np.eye(self.states_dimension)*1e-6)
         # posterior
         x_posterior_temp = x_prior
         evaluation = 1
@@ -372,10 +373,10 @@ class IMCEKF(Filter):
             mc_count += 1
             states_error = x_posterior_temp - x_prior
             L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error) / \
-                self.kernel_G_Q((states_error.T*inv(P)*states_error))
+                self.kernel_G_Q((states_error.T*P_inv*states_error))
             # # Logs
-            # self.in_log_func(self.kernel_G_Q((states_error.T*inv(P)*states_error)), 'G(Q)')
-            K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
+            # self.in_log_func(self.kernel_G_Q((states_error.T*P_inv*states_error)), 'G(Q)')
+            K = inv(P_inv + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
             x_posterior = x_prior + K * measuring_error
             if np.linalg.norm(x_posterior_temp) == 0:
                 evaluation = 0
@@ -385,7 +386,8 @@ class IMCEKF(Filter):
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
         #  Logs
-        self.in_log_func(self.kernel_G_Q((states_error.T*inv(P)*states_error)), 'G(Q)')
+        self.in_log_func(K, 'K')
+        # self.in_log_func(self.kernel_G_Q((states_error.T*P_inv*states_error)), 'G(Q)')
         return x_posterior, P_posterior, 0
 
 
@@ -407,6 +409,7 @@ class IMCEKF2(Filter):
         F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         P = F * P * F.T + self.cov_Q
+        P_inv = inv(P + np.eye(self.states_dimension)*1e-6)
         # posterior
         x_posterior_temp = x_prior
         evaluation = 1
@@ -415,8 +418,8 @@ class IMCEKF2(Filter):
             mc_count += 1
             states_error = x_posterior_temp - x_prior
             L = self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error, measuring_error, x_prior, self.cov_R) / \
-                self.kernel_G_Q(states_error.T*inv(P)*states_error, states_error, x_prior, P)
-            K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
+                self.kernel_G_Q(states_error.T*P_inv*states_error, states_error, x_prior, P)
+            K = inv(P_inv + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
             x_posterior = x_prior + K * measuring_error
             if np.linalg.norm(x_posterior_temp) == 0:
                 evaluation = 0
@@ -450,10 +453,11 @@ class MCEKF2(Filter):
         F = self.func.states_jacobian(x_previous, self.Ts, k)
         H = self.func.obs_jacobian(x_prior)
         P = F * P * F.T + self.cov_Q
+        P_inv = inv(P + np.eye(self.states_dimension)*1e-6)
         # posterior
         # The calculation of L, denominator should be the error of states which can be instead with Q.
         L = self.kernel_G(measuring_error.T*inv(self.cov_R)*measuring_error)
-        K = inv(inv(P) + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
+        K = inv(P_inv + (L * H.T * inv(self.cov_R) * H)) * L * H.T * inv(self.cov_R)
         x_posterior = x_prior + K * measuring_error
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
@@ -708,9 +712,9 @@ class MCKF2(Filter):
         P = F * P * F.T + self.cov_Q
         # posterior
         H = self.func.obs_matrix(x_prior)
-        L = self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*inv(P)) / \
+        L = self.kernel_G(np.linalg.norm((x_prior - F*x_previous))*P_inv) / \
             self.kernel_G(np.linalg.norm(self.std_Q)*inv(self.cov_R))
-        K = inv(L * inv(P) +
+        K = inv(L * P_inv +
                 (H.T * inv(self.cov_R) * H)) * H.T * inv(self.cov_R)
         x_posterior = x_prior + K * (sensor_data - H * x_prior)
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \

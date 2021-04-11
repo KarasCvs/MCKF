@@ -2,9 +2,9 @@
 from filters import MCUKF1 as MCUKF
 from filters import UKF as UKF
 from filters import EKF as EKF
-from filters import MCEKF2 as MCEKF
-from filters import IMCEKF as IMCEKF
-from filters import IMCEKF2 as IMCEKF2
+# from filters import MCEKF2 as MCEKF
+from filters import IMCEKF as MCEKF
+# from filters import IMCEKF2 as IMCEKF2
 # from filters import MCEKF1 as MCEKF
 from filters import NonlinearSys as Sys
 import numpy as np
@@ -20,11 +20,11 @@ class Simulation():
         self.Ts = 0.1
         self.N = int(self.t/self.Ts)
         # noise
-        self.q = np.diag([2])
-        self.r = 10              # 20 for non-Gaussian
+        self.q = np.diag([0, 0, 0])
+        self.r = 60             # 20 for non-Gaussian
         # Filter parameters
-        self.q_filter = np.diag([2])
-        self.r_filter = 10         # 20 for non-Gaussian
+        self.q_filter = np.diag([0, 0, 0])
+        self.r_filter = 60         # 20 for non-Gaussian
         # MCKF part
         self.eps = 1e-4
         # UKF part
@@ -32,17 +32,17 @@ class Simulation():
         self.beta = 2
         self.kappa = 3
         # System initial values
-        self.sys_init = [0]   # [3e5, -2e4, 1e-3]
+        self.sys_init = [3e5, -2e4, 1e-3]   # [3e5, -2e4, 1e-3]
         # Filter initial values
         # self.filter_init = ([11], [1])
-        self.filter_init = ([0], [1])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
+        self.filter_init = ([3e5, -2e4, 9e-4], [2e3, 4e2, 1e-6])  # default ([3e5, -2e4, 9e-4], [1e6, 4e6, 1e-6])
         self.states_dimension = len(self.sys_init)
         self.obs_dimension = 1
         self.step()
         # --------------------------------------------------------------------------------- #
         # --------------------------------- Impulse noise --------------------------------- #
         sys_impulse = 0
-        obs_impulse = 1
+        obs_impulse = 0
         sys_diag = [1 for i in range(self.states_dimension)]
         self.additional_sys_noise = []
         for _ in range(self.repeat):
@@ -50,15 +50,15 @@ class Simulation():
             for i in range(self.N):
                 if np.random.randint(0, 100) < 5:
                     additional_sys_noise[:, i] = np.dot(
-                                                        np.random.choice((-1, 1), self.states_dimension) * np.diag(sys_diag),
-                                                        np.random.randint(np.linalg.norm(self.q)*10, np.linalg.norm(self.q)*20+1, size=(self.states_dimension, 1)))
+                                                        np.random.choice((0, 1), self.states_dimension) * np.diag(sys_diag),
+                                                        np.random.randint(np.linalg.norm(self.q)*10, np.linalg.norm(self.q)*15+1, size=(self.states_dimension, 1)))
             self.additional_sys_noise.append(additional_sys_noise)
         self.additional_obs_noise = []
         for _ in range(self.repeat):
             additional_obs_noise = np.zeros((self.obs_dimension, self.N))
             for i in range(self.N):
                 if np.random.randint(0, 100) < 5:
-                    additional_obs_noise[:, i] = np.random.choice((-1, 1)) * np.random.randint(self.r*15, self.r*25+1)
+                    additional_obs_noise[:, i] = np.random.choice((0, 1)) * np.random.randint(self.r*10, self.r*15+1)
             self.additional_obs_noise.append(additional_obs_noise)
         if not sys_impulse:
             self.additional_sys_noise = np.zeros(self.repeat)
