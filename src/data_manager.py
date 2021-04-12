@@ -95,7 +95,7 @@ class Manager():
             plt.legend(loc='upper left')
             plt.title("Observation")
 
-    def plot_mse1(self):
+    def plot_mse1(self, number=0):
         plt.figure()
         for i in range(self.states_dimension):
             plt.subplot(100*self.states_dimension+11+i)
@@ -125,32 +125,35 @@ class Manager():
 
     # Only plot value(inside of class) that self.find() found
     def plot(self, data, name=None):
-        length = len(data[0])
-        if len(data) == self.data['repeat']:
-            average = [0 for _ in range(length)]
-            for j in range(length):
-                for i in range(len(data)):
-                    average[j] += data[i][j]
-                average[j] /= len(data)
-        data = average
-        plt.figure()
         try:
-            plt.plot([i for i in range(len(data))], data)
-            plt.grid(True)
-            # plt.legend(loc='upper left')
-            plt.title(name)
-        except ValueError:
-            dimension = data[0].shape[0]
-            plot_list = [[] for _ in range(dimension)]
-            for i in range(dimension):
-                for j in data:
-                    plot_list[i].append(np.asscalar(j[i]))
-            for i in range(dimension):
-                plt.subplot(100*dimension+11+i)
-                plt.plot([i for i in range(len(plot_list[i]))], plot_list[i], linewidth=1)
+            length = len(data[0])
+            if len(data) == self.data['repeat']:
+                average = [0 for _ in range(length)]
+                for j in range(length):
+                    for i in range(len(data)):
+                        average[j] += data[i][j]
+                    average[j] /= len(data)
+            data = average
+            plt.figure()
+            try:
+                plt.plot([i for i in range(len(data))], data)
                 plt.grid(True)
                 # plt.legend(loc='upper left')
                 plt.title(name)
+            except ValueError:
+                dimension = data[0].shape[0]
+                plot_list = [[] for _ in range(dimension)]
+                for i in range(dimension):
+                    for j in data:
+                        plot_list[i].append(np.asscalar(j[i]))
+                for i in range(dimension):
+                    plt.subplot(100*dimension+11+i)
+                    plt.plot([i for i in range(len(plot_list[i]))], plot_list[i], linewidth=1)
+                    plt.grid(True)
+                    # plt.legend(loc='upper left')
+                    plt.title(name)
+        except TypeError:
+            print("Find nothing.")
 
     # locate in files.
     def locate(self, keywords):

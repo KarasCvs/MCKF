@@ -5,7 +5,7 @@ import winsound
 mg = Manager()
 
 repeat = 30
-sigmas = [10, 50, 100, 500]
+sigmas = [3, 5, 8, 10]
 sim = Sim(repeat)
 sim.sys_run()
 for sigma in sigmas:
@@ -15,13 +15,14 @@ for sigma in sigmas:
     mg.view_data(data)
     mg.plot_mse()
     mg.plot_mse1()
-    mg.plot_states()
-    # mg.plot(mg.find('IMCEKF2, sigma_square_R'), 'Sigma of R')
-    # mg.plot(mg.find('IMCEKF2, sigma_square_Q'), 'Sigma of Q')
-    # mg.plot(mg.find('IMCEKF, K'), 'IMCEKF, K')
+    # mg.plot_states()
+    # mg.plot(mg.find('IMCEKF, G(R)'), f'sigma={sigma}, G(R)')
+    mg.plot(mg.find('IMCEKF, G(Q)'), f'sigma={sigma}, G(Q)')
+    mg.plot(mg.find('IMCEKF, K'), f'sigma={sigma}, IMCEKF, K')
+    # mg.plot(mg.find('EKF, K'), f'sigma={sigma}, EKF, K')
     # mg.plot(mg.find('IMCEKF, e'), 'IMCEKF, e')
     # mg.plot(mg.find('EKF, K'), 'EKF, K')
-    # mg.plot(mg.find('MCEKF_DS, L'), 'MCEKF, L')
+    mg.plot(mg.find('IMCEKF, L'), f'sigma={sigma}, L')
 winsound.Beep(300, 300)
 
 # keywords = {"description": "Gaussian test"}
