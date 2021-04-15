@@ -237,7 +237,7 @@ class Filter():
         if self.shift_bandwidth:
             self.sigma_square_R = self.shift_sigma(self.sigma_square_R, e, u, cov)
         res = np.asscalar(np.exp(-((e) / (2*self.sigma_square_R))))
-        self.in_log_func(e, 'e')
+        # self.in_log_func(e, 'e')
         if res < 1e-8:
             res = 1e-8
         return res
@@ -340,7 +340,7 @@ class EKF(Filter):
         P = F * P * F.T + self.cov_Q
         # posterior
         K = P * H.T * inv(H * P * H.T + self.cov_R)
-        self.in_log_func(K, 'K')
+        # self.in_log_func(K, 'K')
         x_posterior = x_prior + K * (sensor_data -
                                      self.func.observation_func(x_prior))
         P_posterior = (np.eye(self.states_dimension) - K * H) * P
@@ -388,10 +388,10 @@ class IMCEKF(Filter):
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
         #  Logs
-        self.in_log_func(self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error), 'G(R)')
-        self.in_log_func(self.kernel_G_Q((states_error.T*P_inv*states_error)), 'G(Q)')
-        self.in_log_func(L, 'L')
-        self.in_log_func(K, 'K')
+        # self.in_log_func(self.kernel_G_R(measuring_error.T*inv(self.cov_R)*measuring_error), 'G(R)')
+        # self.in_log_func(self.kernel_G_Q((states_error.T*P_inv*states_error)), 'G(Q)')
+        # self.in_log_func(L, 'L')
+        # self.in_log_func(K, 'K')
         # self.in_log_func(self.kernel_G_Q((states_error.T*P_inv*states_error)), 'G(Q)')
         return x_posterior, P_posterior, 0
 
@@ -434,8 +434,8 @@ class IMCEKF2(Filter):
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
         # Logs
-        self.in_log_func(self.sigma_square_R, 'sigma_square_R')
-        self.in_log_func(self.sigma_square_Q, 'sigma_square_Q')
+        # self.in_log_func(self.sigma_square_R, 'sigma_square_R')
+        # self.in_log_func(self.sigma_square_Q, 'sigma_square_Q')
         return x_posterior, P_posterior, 0
 
 
@@ -467,7 +467,7 @@ class MCEKF2(Filter):
         P_posterior = (np.eye(self.states_dimension)-K*H)*P*(np.eye(self.states_dimension)-K*H).T \
             + K*self.cov_R*K.T
         # Logs
-        self.in_log_func(L, 'L')
+        # self.in_log_func(L, 'L')
         return x_posterior, P_posterior, 0
 
 

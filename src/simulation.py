@@ -14,7 +14,7 @@ import math
 class Simulation():
     def __init__(self, repeat_):
         # --------------------------------- System parameters --------------------------------- #
-        self.description = "non-Gaussian impulse, rocket simulation"
+        self.description = "Gaussian, 3 states"
         self.repeat = repeat_
         self.t = 30
         self.Ts = 0.1
@@ -90,7 +90,7 @@ class Simulation():
                 'states': {},  # {'system states': self.states},
                 'noises': {'obs noise': self.obs_noise[0].tolist(), 'add noise': self.additional_obs_noise[0].tolist()},
                 'observations': {},  # {'noise_free observation': self.real_obs, 'noise observation': self.sensor},
-                'ta_mse': {}, 'mse': {}, 'parameters': {}, 'run time': {}, 'others': {}
+                'ta_mse': {}, 'mse': {}, 'parameters': {'sigma': self.sigma}, 'run time': {}, 'others': {}
                 }
         # --------------------------------- Filter parameters --------------------------------- #
         print("Simulation started.")
